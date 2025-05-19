@@ -14,6 +14,6 @@ All module requirements have been successfully completed.
 To reinforce my understanding through hands-on practice, I solved over **35 Bash scripting problems** on the Exercism platform.
 These exercises deepened my grasp of logic flow and scripting syntax in real-world scenarios.
 
-🔗 [View Bash Scripting Practice Repository](http://github.com/bash-scripting)
+🔗 [View Bash Scripting Practice Repository](https://github.com/oybek-turaev-cyber/Bash-Scripting#)
 
 
