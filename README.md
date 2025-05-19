@@ -7,6 +7,8 @@ This repository is a live record of my hands-on progress using:
 - **HTB real-world machines** (red team side understanding)
 - My own reflections, detection techniques, and playbooks
 
+🔗 [View Bash Scripting Practice Repository](https://github.com/oybek-turaev-cyber/Bash-Scripting#)
+
 🎯 **Goal**: Strengthen my SOC, Threat Detection, and Incident Response skills to become a world-class Cybersecurity Defender.
 
 📅 Timeline: Jan 2025 – Ongoing
