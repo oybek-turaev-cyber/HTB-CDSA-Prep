@@ -1,6 +1,6 @@
 # My SOC Analyst Journey: HTB Academy + CDSA Preparation
 
-Hi! I’m Oybek, a cybersecurity master's student preparing for the **HTB Certified Defensive Security Analyst (CDSA)** certification.
+Hi! I’m Oybek, a Cybersecurity Master's Student preparing for the **HTB Certified Defensive Security Analyst (CDSA)** certification.
 
 This repository is a live record of my hands-on progress using:
 - **HTB Academy's Pre-SOC and SOC paths** (theory + labs)
