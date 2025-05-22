@@ -50,7 +50,7 @@
     #2 >> Sec Monitoring & SIEM Fundamentals: Done on 18/05/2025
          https://academy.hackthebox.com/achievement/897337/211
 
-    #3 >> Windows Event Logs & Finding Evil: Done on ............
+    #3 >> Windows Event Logs & Finding Evil: Done on 22/05/2025
 
 
 
