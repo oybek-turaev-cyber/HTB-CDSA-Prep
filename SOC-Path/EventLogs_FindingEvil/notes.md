@@ -33,7 +33,8 @@
     specific `ObjectID`
 
 # Analyzing Evil With Sysmon & Event Logs
-- **Sysmon >> System Monitor**
+- **Sysm
+- on >> System Monitor**
     - detailed info >> `process creation`, `network connections`, `changes to file creation` etc
     - uses IDs >>  each ID corresponds to a specific type of event
         - `ID 1` >> Process Creation events
@@ -118,17 +119,206 @@
         - `Microsoft-Windows-PowerShell` >> provider tracks PowerShell execution and command activity, making it invaluable for detecting suspicious Power              Shell usage
         - `Microsoft-Antimalware-Service` >> ETW provider can be employed to detect potential issues with the antimalware service
         - `Microsoft-Windows-DNS-Client` >> visibility into DNS client activity >> unusual DNS requests that may indicate C2 communication
+
+# Tapping into ETW
+
+## Detection Example 1. Detecting Strange Parent-Child Relationship
+    - Happens when processes call other unusual processes
+    - highly unlikely to see "calc.exe" spawning "cmd.exe"
+    - Tool to use >> `Process Hacker`
+
+    - **Attack Technique: Parent PID Spoofing:**
+        - Tool: Powershell >> `psgetsystem project` > need to import this module `psgetsys.ps1`
+        - `[MyProcess]::CreateProcessFromParent(9432,"C:\Windows\System32\cmd.exe","")`
+            - Here >> PID 9432 is `spoolsv.exe` >> shows as if it's the parent process of the
+                `cmd.exe`
+            - Due to the parent PID spoofing technique we employed, `Sysmon Event 1` incorrectly displays spoolsv.exe as the parent of cmd.exe. However, it               was actually `powershell.exe` that created `cmd.exe`.
+            -
+    - **How to Detect?:**
+        - So here. sysmon is no more effective, we have to say goodbye to him for now.
+        -
+        - I used the stronger log tool which is the father of the most existing ones: ETW
+        - **SilkETW:** >>  Using `Microsoft-Windows-Kernel-Process` provider, we can see more
+          what's going in the lower level
+        - `SilkETW.exe -t user -pn Microsoft-Windows-Kernel-Process -ot file -p C:\windows\temp\etw.json`
+        -
+        - By analyzing `etw.json` log file >> we see that `powershell` is the one who used
+          the process ID `9432` and initiated the `cmd.exe`
+
+## Detection Example 2: Detecting Malicious .NET Assembly Loading
+    - a Strategy known as `Living off the Land` (LotL) >> **You use whatever you have without
+        bringing anything extra**
+        - use legitimate apps & services to carry out the malicious processes
+
+    - another Strategy >> `Bring Your Own Land >> (BYOL)` >>
+        - This attack tries to employ `.NET assemblies` executed `entirely in memory.`
+        - involves creating `custom-built tools` using languages `like C#`, rendering them independent of the pre-existing tools on the target system.
+        - **Why this attack is effective ?**
+            - since >> already present .NET env in the system
+            - .NET assemblies `has a nice ability` **to be loaded directly into memory**
+            - This means that an `executable or DLL` does not need to be written physically to the disk - instead, `it is executed directly in memory`.
+            - a wide range of libraries into the .NET framework
+
+  - **Attack Technique:  "execute-assembly" by CobaltStrike**
+    - implemented in CobaltStrike
+    - CobaltStrike's 'execute-assembly' command allows the user to `execute .NET assemblies directly from memory`,
+    - making it an ideal tool for implementing a BYOL strategy.
+
+    - We use now .NET assembly >> precompiled and resided on the disk >> `Seatbelt`
+    - `Seatbelt` >>  is a well-known .NET assembly, often employed by adversaries who load and execute it in memory
+        - To gain `situational awareness` on a `compromised system.`
+        -
+        - we run `.\Seatbelt.exe TokenPrivileges` command in the powershell
+        - This .NET assembly will load DLLs: **clr.dll and mscoree.dll**
         -
 
+    - **How To Detect?:**
+        - We will keep an eye on `.NET-related DLLs such as 'clr.dll' and 'mscoree.dll'.`
+        - We can use Sysmon ID 7 >> however, it does not give **granular details about the actual content of the loaded .NET assembly.**
+            - while it informs us about the DLLs being loaded
+        - To deeper & better analyse >> `(ETW)` and specifically the `Microsoft-Windows-DotNETRuntime` provider.
+        -
+        - We run `SilkETW` >> `SilkETW.exe -t user -pn Microsoft-Windows-DotNETRuntime -uk 0x2038 -ot file -p C:\windows\temp\etw.json`
+        - Then we simulate the attack again and the **analyse the etw.json logs**
+        - Now, we see **wealth of information about the loaded assembly, including method names.**
 
+## Practical Challenge:
+    - Task is to simulate the attack with `Seatbelt` and need to find the **ManagedInteropMethodName** from the loaded .NET assembly
 
+    **Solved:**
+    - For this, I use `SilkETW` >> `SilkETW.exe -t user -pn Microsoft-Windows-DotNETRuntime -uk 0x2038 -ot file -p C:\windows\temp\etw.json`
+    - This captures loaded .NET assembly with more info thanks to the provider
+        `Microsoft-Windows-DotNETRuntime`
+    - I manually review the `etw.json` file >> I searched for `Seatbelt` and analysed its loaded
+        .NET assemblies and there I found the Method Names loaded for this
+    - Voila c'est comment j'ai trouve la reponse!
 
+# Get-WinEvent
+    - an ideal tool >> to work with massive amount of logs
 
+    - `Get-WinEvent -ListLog * | Select-Object LogName, RecordCount, IsClassicLog, IsEnabled, LogMode, LogType | Format-Table -AutoSize`
+        - `-ListLog` >> shows all available logs
 
+    - `Get-WinEvent -ListProvider * | Format-Table -AutoSize`
+        - >> shows log providers
 
+    - `Get-WinEvent -LogName 'System' -MaxEvents 50 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message | Format-Table -AutoSize`
+        - >> Retrieving events from the System log
 
+    - `Get-WinEvent -LogName 'Microsoft-Windows-WinRM/Operational' -MaxEvents 30 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message        | Format-Table -AutoSize`
+        - >> now logs from Microsoft-Windows-WinRM/Operational
 
+    - `Get-WinEvent -Path 'C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\exec_sysmon_1_lolbin_pcalua.evtx' -MaxEvents 5 | Select-Object >>> specify he`
+        - >> from the files `.evtx`
 
+    - `Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; ID=1,3} | Select-Object TimeCreated, ID, ProviderName, LevelDisplay       Name, Message | Format-Table -AutoSize`
+        - >> now with **-FilterHashtable**
+        - **Sysmon ID 1 and 3** >> for *dangerous or uncommon binaries* or C2 communication possible
+        -
+        - `Get-WinEvent -FilterHashtable @{Path='C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\sysmon_mshta_sharpshooter_stageless_meterpreter.evtx'; ID           =1,3} |`
+            - This is for exported files
 
+## If we want the get event logs based on a date range (5/28/23 - 6/2/2023)
+    - `$startDate = (Get-Date -Year 2023 -Month 5 -Day 28).Date`
+    - `$endDate   = (Get-Date -Year 2023 -Month 6 -Day 3).Date`
+    - Final Command:
+    - `Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; ID=1,3; StartTime=$startDate; EndTime=$endDate} | Select-Object Tim       eCreated, ID, ProviderName, LevelDisplayName, Message | Format-Table -AutoSize`
 
+    - *filter between the start date inclusive and the end date exclusive. That's why we specified June 3rd and not 2nd.*
+
+    - **Important:** >> **Sysmon** >> **ID 1 >> Process Create**
+    - `Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; ID=1} | Where-Object {$_.Properties[21].Value -like "*-enc*"} | For       mat-List`
+        - `Where-Object {$_.Properties[21].Value -like "*-enc*"}`
+        - `$_` >> refers to the current object in the pipeline, i.e., each individual event that was retrieved and passed from the previous command.
+        - `.Properties[21].Value` >> *index 21* corresponds to the ParentCommandLine property of the event
+        - `-like "*-enc*"` >> **-enc** string might be part of suspicious commands, for example, it's a common parameter in PowerShell commands to denote            an **encoded command which could be used to obfuscate malicious scripts.**
+
+## Practical Challenge:
+    - I need utilize the `Get-WinEvent` cmdlet to traverse all event logs located within the "C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Lateral Movement" dire      ctory and determine when the **\\*\PRINT** share was added. Enter the time of the identified event.
+    -
+    **Solved:**
+    I created a **Get-WinEvent** query >> the location has more than 20 log files
+    I used `Where-Object` cmdlet and also use Message property from the logs to match the message I
+    am looking for ..  and spedificied some columns I am interested in
+    - `Get-WinEvent  -Path 'C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Lateral Movement' | `
+      `Where-Object {$_.Message -like "*\\*\PRINT*"} | Select-Object TimeCreated, ProviderName`
+
+    - Voila >> J'ai trouve le flag!
+
+# Skills Assessment
+
+## Challenge #1
+    - *By examining the logs located in the "C:\Logs\DLLHijack" directory, determine the process responsible for executing a DLL hijacking attack. Enter t       he process name as your answer*
+
+    **Solved:**
+    - Tool >> Event Viewer >> Sysmon ID 7
+    - I found that the `WININET.dll` is associated with the executable which is running from the
+    suspicious location >> not `/windows/system32`
+    - Manual review the associated processes with these DLL
+    - Voila >> J'ai retrouve le flag.
+    -
+## Challenge #2
+    - *By examining the logs located in the "C:\Logs\PowershellExec" directory, determine the process that executed unmanaged PowerShell code. Enter the p      rocess name as your answer*
+
+    **Solved:**
+    - Tools >> Event Viewer >> Sysmon ID 1,7
+    - I look at the loaded DLL by powershell.exe >> among them, the necessary ones `clr.dll` and
+        `clrjit.dll` >> I keep an eye on them
+    - Then I found that `an application` which is not supposed to use `clr.dll` or `clrjit.dll` is
+        loading these variables
+    - Interestingly, that application is running from the suspicious location user-writable
+        directory >> not >> `/windows/system32`
+    - Voila, c'est le flag!
+
+## Challenge #3
+    - *By examining the logs located in the "C:\Logs\PowershellExec" directory, determine the process that injected into the process that executed unmanag      ed PowerShell code.*
+
+    **Solved:**
+    - It went a bit challenging now I need to find the process that injected or created another
+        process or thread in another process.
+    - Tool >> Event Viewer
+    - I found out that >> `Sysmon ID 8`(RemoteThread) >> It's the one which gives me the correct direction >>
+    - I filtered the logs based on sysmon ID 8 >> then I found the process which injected into the
+        another process which I found a bit earlier!
+    - Voila >> c'est le flag!
+    -
+## Challenge #4
+    - *By examining the logs located in the "C:\Logs\Dump" directory, determine the process that performed an LSASS dump. Enter the process name*
+
+    **Solved:**
+    - It went well >> I knew that the suspicious service will connect to the `lsass.exe`
+    - Tool >> Event Viewer >> Filter Option
+    - I used the naive approach >> I filtered based on the `lsass.exe` and look for the each service
+        connected to this service
+    - Importantly >> I keep an eye on the services which are from `not /windows/system32` >> this
+        idea helps me  a lot >>
+    - After searching 258 logs >> I see the services from the `unusual location` accessing to our
+        honey
+    - Voila, c'est le processus de recherche de la reponse!
+
+## Challenge #5
+    - *By examining the logs located in the "C:\Logs\Dump" directory, determine if an ill-intended login took place after the LSASS dump*
+
+    **Solved:**
+    - I have the checked the `Event ID 4624` >> Successful Login
+    - Tool >> Event Viewer >> Filter Option
+    - I identified the time when suspicious program accessed to the lsass.exe
+    - Then based on this time, I see any successful logins >> I see no activites of "ill-intended"
+    - Voila, J'ai retrouve le drapeau!
+
+## Challenge #6
+    - *By examining the logs located in the "C:\Logs\StrangePPID" directory, determine a process that was used to temporarily execute code based on a stra      nge parent-child relationship. Enter the process name*
+
+    **Solved:**
+    - It went a bit challenging for me
+    - I kinda got the feeling that I need to search for powershell.exe or cmd.exe and who executed
+        them
+    - This feeling led me to the right direction
+    - Tool >> Event Viewer >> `Sysmon ID 1 and 10` >>  I understood that I need logins to tell me when
+        "Process Created" and When "Process Accessed To Another Process" >> this shed a light in the
+        dark room for me
+    - I filtered the logs based on these IDs >> manual check the few logs (since they were a few)
+    - I found the suspicious connection explorer.exe > in_the_middle_another_benign_application >>
+        then cmd.exe >> then I found the evil.
+    - Voila, c'est le processus de recherche de la reponse!
 
