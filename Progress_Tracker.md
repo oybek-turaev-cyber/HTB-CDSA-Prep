@@ -53,6 +53,10 @@
     #3 >> Windows Event Logs & Finding Evil: Done on 22/05/2025
          https://academy.hackthebox.com/achievement/897337/216
 
+    #4 >> Threat Hunting & Hunting With Elastic: Done on 26/05/2025
+         https://academy.hackthebox.com/achievement/897337/214
+
+
 
 
 
