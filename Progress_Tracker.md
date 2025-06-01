@@ -56,7 +56,8 @@
     #4 >> Threat Hunting & Hunting With Elastic: Done on 26/05/2025
          https://academy.hackthebox.com/achievement/897337/214
 
-
+    #5 >> Log Sources & Investigating with Splunk: Done on 01/06/2025
+         https://academy.hackthebox.com/achievement/897337/218
 
 
 
