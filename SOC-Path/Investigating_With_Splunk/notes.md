@@ -255,4 +255,177 @@
     - `index="main" sourcetype="WinEventLog:Sysmon" host="DESKTOP......$" | stats count by SourceIp, DestinationIp, DestinationPort | sort - count`
     - Voila, c'est fini!!!
 
+# Detecting Attacker Behavior With Splunk Based on TTPS
+    - Two Approaches:
+    1. **Spot the known**
+    2. **Spot the unusual**
 
+## Crafting SPL Searches Based On Known TTPs
+    - **Detection Of Reconnaissance Activities Leveraging Native Windows Binaries:**
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR Image=*\\whoami.exe OR Image=*\\netstat.e           xe OR Image=*\\nbtstat.exe OR Image=*\\hostname.exe OR Image=*\\tasklist.exe | stats count by Image,CommandLine | sort - count`
+
+    - **Detection Of Requesting Malicious Payloads/Tools Hosted On Reputable/Whitelisted Domains (Such As githubusercontent.com)**
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=22  QueryName="*github*" | stats count by Image, QueryName`
+            - Sysmon ID 22 >> DNS Queries
+
+    - **Detection Of PsExec Usage:**
+        - `PsExec` >> is a tool to manage remote Windows systems via command-line
+            - It's available to members of a computer’s Local Administrator group.
+            - It works by `copying a service executable` to the `hidden Admin$ share`.
+            - It taps into the Windows Service Control Manager API to jump-start the service.
+            - The service uses named pipes to link back to the PsExec tool
+            - PsExec can be deployed on both local and remote machines
+            - It can enable a user to act under the **NT AUTHORITY\SYSTEM account**.
+            -
+        - `Case #1:` >> **Leveraging Sysmon Event ID 13 (RegistryEvent):**
+            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=13 Image="C:\\Windows\\system32\\services.exe"
+              TargetObject="HKLM\\System\\CurrentCo ntrolSet\\Services\\*\\ImagePath" | rex field=Details "(?<reg_file_name>[^\\\]+)$"
+              | eval reg_file_name = lower(reg_file_name), file_name = if(isnull(file_name),reg_file_name,lower(file_name))
+              | stats values(Image) AS Image, values(Details) AS RegistryDetails, values(_time) AS EventTimes, count by file_name, ComputerName`
+            - **this query is looking for instances where the services.exe process has modified the ImagePath value of any service.**
+            -
+        - `Case #2:` >> **Leveraging Sysmon Event ID 11 (FileCreate):**
+            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image=System | stats count by TargetFilename`
+            -
+        - `Case #3:` >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
+            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System | stats count by PipeName`
+
+    - **Detection Of Utilizing Archive Files For Transferring Tools Or Data Exfiltration:**
+        - `index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
+          | stats count by ComputerName, User, TargetFilename | sort - count`
+
+    - **Detection Of Utilizing PowerShell or MS Edge For Downloading Payloads/Tools:**
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" |  stats count by Image, TargetFilename |  sort + count`
+        -
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
+           |  stats count by TargetFilename |  sort + count`
+        - ***Zone.Identifier is indicative of a file downloaded from the internet or another potentially untrustworthy source***
+
+    - **Detection Of Execution From Atypical Or Suspicious Locations:**
+        - any process creation (EventCode=1) occurring in a `user's Downloads folder`.
+        - `index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" |  stats count by Image`
+
+    - **Detection Of Executables or DLLs Being Created Outside The Windows Directory:**
+        - `index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
+          | stats count by User, TargetFilename | sort + count`
+
+    - **Detection Of Misspelling Legitimate Binaries:**
+        - misspellings of the legitimate PSEXESVC.exe binary, commonly used by PsExec.
+        - By examining the Image, ParentImage, CommandLine and ParentCommandLine fields, the search aims to identify instances where variations of psexe a          re used
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (CommandLine="*psexe*.exe"
+          NOT (CommandLine="*PSEXESVC.exe" OR CommandLine="*PsExec64.exe")) OR (ParentCommandLine="*psexe*.exe"
+          NOT (ParentCommandLine="*PSEXESVC.exe" OR ParentCommandLine="*PsExec64.exe")) OR (ParentImage="*psexe*.exe"
+          NOT (ParentImage="*PSEXESVC.exe" OR ParentImage="*PsExec64.exe")) OR (Image="*psexe*.exe"
+          NOT (Image="*PSEXESVC.exe" OR Image="*PsExec64.exe"))
+          |  table Image, CommandLine, ParentImage, ParentCommandLine`
+        -
+    - **Detection Of Using Non-standard Ports For Communications/Transfers:**
+        - the idea is to exclude the commonly used ports: 80,443,22,21
+        - `index="main" EventCode=3 NOT (DestinationPort=80 OR DestinationPort=443 OR DestinationPort=22 OR DestinationPort=21)
+          | stats count by SourceIp, DestinationIp, DestinationPort | sort - count`
+        -
+## Practical Challenges:
+    1.  Find through SPL searches against all data the password utilized during the PsExec activity
+
+    **Solved:**
+    - I got the feeling that I need CommandLine field
+    - I found this info through this SPL:
+        - `index="main" sourcetype="WinEventLog:Sysmon" "*psexec*" | stats count by CommandLine, Image`
+    - Voila, c'est fini >> ca m'a donne le drapeau
+
+
+# Detecting Attacker Behavior With Splunk Based On Analytics
+    - Key Idea >> **By profiling normal behavior and identifying deviations from this baseline**
+
+    - `streamstats` command in Splunk
+
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | bin _time span=1h | stats count as NetworkConnections by _time, Image
+      | streamstats time_window=24h avg(NetworkConnections) as avg stdev(NetworkConnections) as stdev by Image
+      | eval isOutlier=if(NetworkConnections > (avg + (0.5*stdev)), 1, 0) | search isOutlier=1`
+
+    - With Network Connections Event 3 >> group these events into hourly intervals
+    - `bin` can be seen as a `bucket` alias
+    - *For each unique process image (Image), we calculate the number of network connection events per time bucket.*
+
+    - `streamstats` command to calculate a rolling `average` and `standard deviation` of the number of network connections
+    - over a `24-hour period` for `each unique process image.`
+
+    - with `eval` >> new field is created for anything abnormal >> based on our conditions >>
+    - this new field takes `value of 1` in case the condition is true
+    - Then we see where the field=1 which is abnormality
+
+## Crafting SPL Searches Based On Analytics
+    - **Detection Of Abnormally Long Commands:**
+        - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
+        - We apply some improvements:
+        - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe ParentImage!="*msiexec.exe" ParentImage!="*explorer.exe"
+          | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
+
+    - **Detection Of Abnormal cmd.exe Activity:**
+        - calculates the count, average, and standard deviation of cmd.exe executions, and flags outliers.
+        - `index="main" EventCode=1 (CommandLine="*cmd.exe*") | bucket _time span=1h | stats count as cmdCount by _time User CommandLine
+          | eventstats avg(cmdCount) as avg stdev(cmdCount) as stdev
+          | eval isOutlier=if(cmdCount > avg+1.5*stdev, 1, 0) | search isOutlier=1`
+
+    - **Detection Of Processes Loading A High Number Of DLLs In A Specific Time:**
+        - It is not uncommon for malware to load multiple DLLs in rapid succession
+        - Time Window is 1 hour
+        - `index="main" EventCode=7 | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image
+          | where unique_dlls_loaded > 3 | stats count by Image, unique_dlls_loaded`
+        -
+        - Some benign activity that can be filtered out to reduce noise:
+        - `index="main" EventCode=7 NOT (Image="C:\\Windows\\System32*")
+          NOT (Image="C:\\Program Files (x86)*") NOT (Image="C:\\Program Files*") NOT (Image="C:\\ProgramData*") NOT (Image="C:\\Users\\waldo\\AppData*")
+          | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image | where unique_dlls_loaded > 3
+          | stats count by Image, unique_dlls_loaded | sort - unique_dlls_loaded`
+
+    - **Detection Of Transactions Where The Same Process Has Been Created More Than Once On The Same Computer:**
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
+          | stats count by Image, ParentImage`
+        - `transaction` >> used to group related events together based on shared field values
+        - events are being `grouped together` if they share the **same** `ComputerName` and `Image` values.
+        - program image (Image) and its parent process image (ParentImage).
+        - Some specific Query for further analysis:
+            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1  | transaction ComputerName, Image  | where mvcount(ProcessGuid) > 1
+            | search Image="C:\\Windows\\System32\\rundll32.exe" ParentImage="C:\\Windows\\System32\\svchost.exe"
+            | table CommandLine, ParentCommandLine`
+
+## Practical Challenges:
+    1. Find through an analytics-driven SPL search against all data the source process images that are creating an unusually high number of threads in
+       other processes. Enter the outlier process name as your answer where the number of injected threads is greater than two standard deviations
+       above the average.
+
+    **Solved:**
+    - Firstly, I identified that I need to use Sysmon ID 8 (RemoteThread)
+    - Secondly, I need SourceImage, TargetImage fields
+    - It went a bit challenging since I practiced different analytics conditions with `avg` and `stdev` functions from `eventstats` command in Splunk.
+    - It is interesting that I got the answers when standard deviation is multiplied lower than 2.
+    - My SPL >>
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=8
+      | stats count as threadsCount by SourceImage, TargetImage
+      | eventstats avg(threadsCount) as avg stdev(threadsCount) as stdev
+      | eval isOutlier=if(threadsCount > (avg + (1.5*stdev)), 1, 0)
+      | search isOutlier=1`
+    - Through this search, vous pouvez chercher le process qui a de nombreuses threads
+    - Voila, j'ai trouve le drapeau!!
+
+
+# Skill Assessment:
+    0. This skills assessment section builds upon the progress made in the Intrusion Detection With Splunk (Real-world Scenario) section.
+
+    1. Find through SPL searches against all data the process that created remote threads in rundll32.exe.
+
+    **Solved:**
+    - I need Sysmon 8 (RemoteThread)
+    - My SPL >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=8 TargetImage="rundll32.exe"
+        | stats count by SourceImage, TargetImage | sort - count`
+    - Voila, ca peut te donner le drapeau! C'est fini!
+
+    2. Find through SPL searches against all data the process that started the infection.
+
+    **Solved:**
+    - Based on my previous findings, I see that the attack started with communication with another
+        machine and dowloading malicious dll into the victim machine
+    - Then I identified what process is associated when the dll is firstly run  and what is used to
+        execute the remote code.
+    - Enfin, j'ai trouve le process qui a commence toutes les infections!
