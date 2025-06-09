@@ -124,6 +124,10 @@
     - Voila, Felicitations! C'est fini!
 
 # AS-REProasting
+- AS >> Authentication Services
+    - Roasting >> brute-forcing password hashes
+    - REP >> Requests an AS-REP for accounts from the KDC (Key Distribution Center).
+    - Reuses (replays) this AS-REP data or stores it for later, often in automated or repeated attacks – hence “Reproasting”.
 - Similar to Kerberoasting Attack
     - `Do not require Kerberos preauthentication` property should be enabled
     - Goal >> to get **crackable hashes**
@@ -168,14 +172,76 @@
     - Based on the timeline, I see that the associated user account with this Event ID
     - Voila >> J'ai obtenu le drapeau
 
+# GPP Passwords
+- Group Policy Passwords in AD
+    - **used to configure user environments—like drive mappings, scheduled tasks, or local users.**
+    - *Until 2014, Windows allowed administrators to set passwords (e.g., for local admin accounts) using GPPs.*
+    - These passwords were stored **in SYSVOL, a shared directory that’s readable by all domain users.**
 
+## Attack Scenario:
+- Gain domain access (e.g., a low-privileged domain user)
+    - Access the SYSVOL share on the domain controller:
+        - \\<domain>\SYSVOL\<domain>\Policies\
+    - Search for XML files that store credentials: Groups.xml >> ScheduledTasks.xml >> Services.xml >> Printers.xml
+    - These files may contain encrypted passwords under the tag:
+        - `<cpassword>gAAAA...==</cpassword>`
 
+    - In XML >> files, it mentions the Usernames also:
+        - <User clsid="{123...}">
+            `<Properties action="U" userName="Admin123" password="gAAAAAB...==" />`
+        - </User>
+        -
+    - Use a **known AES 256 static key (published by Microsoft!) to decrypt the password.**
+        - **Microsoft hardcoded the encryption key for compatibility reasons, and it was publicly disclosed in 2012.**
+    - Get the plaintext password and use it for lateral movement, privilege escalation, or persistence.
 
+- Tools:
+    - `Get-GPPPassword.ps1` by **PowerSploit**
+        - `Import-Module .\Get-GPPPassword.ps1` >> `Get-GPPPassword`
 
+## Prevention:
+-  If an organization built its AD environment before 2014 >> **its credentials are still cached**
+-  Since the patch will not clear the existing ones but only prevents the caching of new ones.
+-  Check >> **SYSVOLS** >> GPP should no longer store passwords in new patched environments
 
+## Detection:
+- Cases:
+    - **Accessing the XML file containing the credentials should be a red flag**
 
+- IDs:
+    - `4663` >> access to an object
+    - `4624` >> Later then >> successful login by the compromised account
+    - `4625` >> Later then >> failed login by the compromised account
 
+## Honeypot:
+- Technique:
+    - **use a semi-privileged user with a Wrong Password**
+    - In XML file  >> we put the Wrong Password to the certain account
+    - **Any attempt with failed login attempts highlight us as suspicious**
+- IDs:
+    - **4625, 4771, and 4776**
+    - `4776` >> when a domain controller (DC) attempts to validate the credentials of an account using NTLM over Kerberos
+    - `4771` >> related to Kerberos authentication failures
 
+## Practical Challenges:
+    1. Connect to the target and run the Powersploit Get-GPPPassword function. What is the password of the svc-iis user?
+
+    **Solved:**
+    - It went interesting since in Powershell executionpolicy is set to Restricted
+    - I bypassed this using scope >> temporary execution rights until the next session
+        - `set-executionpolicy -scope Process` >> Then Bypass
+    - Then, I imported the necessary module:
+        - `Import-Module .\Get-GPPPassword.ps1`
+        - `Get-GPPPassword`
+    - Voila, j'ai obtenu le drapeau!
+
+    2. After running the previous attack, connect to DC1 and look at the logs in Event Viewer. What is the Access Mask of the generated events?
+
+    **Solved:**
+    - I have connected to the Domain Controller
+    - Tool: Using Event Viewer >> I filtered the logs for the **object access events** with `Event ID: 4663`
+    - Then later I found out the associated account
+    - Voici, j'ai obtenu the flag!
 
 
 
