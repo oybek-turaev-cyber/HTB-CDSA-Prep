@@ -59,6 +59,8 @@
     #5 >> Log Sources & Investigating with Splunk: Done on 01/06/2025
          https://academy.hackthebox.com/achievement/897337/218
 
+    #6 >> Windows Attacks & Defense: Done on 14/06/2025
+         https://academy.hackthebox.com/achievement/897337/176
 
 
 
