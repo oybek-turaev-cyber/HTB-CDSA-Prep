@@ -243,17 +243,133 @@
     - Then later I found out the associated account
     - Voici, j'ai obtenu the flag!
 
+# GPO Permissions/GPO Files
+- Detection
+    - `Event ID 5136` >> when GPO is modified
+- Honeypot
+    - `Misconfigured GPO`
+    - Consult to `detect_GPO_modified.ps1`
+
+# Credentials in Shares
+- Common Practices:
+    - credentials in network shares within scripts and configuration files (batch, cmd, PowerShell, conf, ini, and config)
+    - credentials in **Shares** or in **Machines** >> in  *Shares* is dangerous since it's accessible by every user
+
+    - **a server's Users group contains Domain users as its member in Active Directory environments.**
+
+    - **The administrator adding scripts with credentials to a share is unaware >> test their
+        scripts in a scripts folder in the C:\ drive; however, if the folder is shared**
+
+    - **in the case of hidden shares (folders whose name ends with a dollar sign $)**
+        - `the misunderstanding comes from the fact that Explorer in Windows does not display files or folders whose name end with a $, however, any other           tool will show it`
+
+## Attack
+- Find Available Shares:
+    - `Invoke-ShareFinder -domain eagle.local -ExcludeStandard -CheckShareAccess`
+    - After the founded share >> `dev$`
+    - We will look for the necessary data: using `Living Off The Land`
+        - `findstr /m /s /i "pass" *.bat`
+        - /s forces to search the current directory and all subdirectories
+        - /i ignores case in the search term
+        - /m shows only the filename for a file that matches the term.
+        -  matching for the string pass
+        -  Attractive targets for this search would be file types such as **.bat, .cmd, .ps1, .conf, .config, and .ini.**
+
+## Prevention
+- The best practice to prevent these attacks is to lock down every share in the domain so there are no loose permissions.
+
+## Detection
+- Goal >> **is to correlate user account with source of authentication**
+
+    - Detection technique is discovering the one-to-many connections, for example, when `Invoke-ShareFinder` scans every domain device to obtain a list o      ts network shares. It would be abnormal for a workstation to connect to `100s or even 1000s of other devices simultaneously.`
+
+    - **if Kerberos were used for authentication, event ID 4768 would be generated**
+
+    - **successful logon with event ID 4624 for the Administrator account:**
+
+## Honeypot
+- a semi-privileged username with a wrong password.  >> service account, created 2+ years ago.
+- With `fake password` >> Because it is a fake password, there is no risk of a threat agent compromising the account.
+- Three event IDs `(4625, 4771, and 4776)` can indicate this.
+
+## Practical Challenge:
+    1. Connect to the target and enumerate the available network shares. What is the password of the Administrator2 user?
+
+    **Solved:**
+    - `findstr /m /s /i "eagle" *.ps1` through this command
+    - J'ai trouve le drapeau
+
+# Credentials in Object Properties
+- **user's (or service account's) password in the Description or Info properties**
+
+## Attack:
+- A simple PowerShell script can query the entire domain by looking for specific search terms/strings in the Description or Info fields:
+    - Consult to `credentials_finder.ps1`
+    - run the script to hunt for the string `pass`
+    - `SearchUserClearTextInformation -Terms "pass"`
+
+## Detection
+TGT Service is generated 4768
+
+## Prevention
+- Continuous Assessment
+- Automate user creation process as much as possible
+- Educate the Employees
+
+## Honeypot
+- set up honeypot user >> with **fake password**
+
+## Practical Challenges
+    1. Connect to the target and use a script to enumerate object property fields. What password can be found in the Description field of the bonni user?
+
+    **Solved:**
+     - apres faire le script, j'ai trouve le mot de pasword de bonni
+
+    2. Using the password discovered in the previous question, try to authenticate to DC1 as the bonni user. Is the password valid?
+
+    **Solved:**
+    - No >> pourquoi? >> parceque le mot de password n'est pas correct pour DC1
+
+    3. Connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the TargetSid of the bonni user?
+
+    **Solved:**
+    - J'ai utilise le Event ID 4625, 4776 >> mais avec ces IDs, Je n'ai pas trouve >> le event ID 4771 a fonctione bien
+
+# DCSync
+-  threat agents utilize to impersonate a Domain Controller and perform replication with a targeted Domain Controller to extract password hashes from Active Directory
+    - The attack can be done through the account which has the following permissions:
+    - **Replicating Directory Changes**
+    - **Replicating Directory Changes All**
+
+## Attack
+- User with those privileges above
+- `runas /user:eagle\rocky cmd.exe`
+- **need to use Mimikatz, one of the tools with an implementation for performing DCSync**
+    - `lsadump::dcsync /domain:eagle.local /user:Administrator`
+    - We obtained the hash of Administrator account >>
+    - `Hash NTLM: fcdc65703dd2b0bd789977f1f3eeaecf`
+
+## Prevention
+-  replications happen between Domain Controllers all the time
+-  Use >> **RPC Firewall >> can block or allow specific RPC calls with robust granularity**
+-  *using RPC Firewall, we can only allow replications from Domain Controllers.*
+
+## Detection
+- Domain Controller replication generates an event with the **ID 4662**
 
 
+## Practical Challenges
+    1. Connect to the target and perform a DCSync attack as the user rocky (password:Slavi123). What is the NTLM hash of the Administrator user?
 
+    **Solved:**
+    - D'abbord, j'ai connecte au ordinateur, apres
+    - J'ai utilise le Mimikatz et voila j'ai obtenu le drapeau
 
+    2. After performing the DCSync attack, connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the Task Categ       ory of the events generated by the attack?
 
-
-
-
-
-
-
+    **Solved:**
+    - c'est tres interessant pour moi, car je sais exactement quell ID est utilise pour `replication` >> 4662
+    - J'ai apres obtenu le drapeau
 
 
 
