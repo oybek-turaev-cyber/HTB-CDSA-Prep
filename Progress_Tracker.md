@@ -62,6 +62,11 @@
     #6 >> Windows Attacks & Defense: Done on 14/06/2025
          https://academy.hackthebox.com/achievement/897337/176
 
+    #7 >> Network Traffic Analysis: Done on 17/06/2025
+         https://academy.hackthebox.com/achievement/897337/81
+
+
+
 
 
 
