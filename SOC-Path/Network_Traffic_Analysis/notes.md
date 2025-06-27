@@ -183,6 +183,253 @@
     - Having a second set of eyes on the data can be a huge help in spotting stuff that may get glossed over.
 
 
+# TCPDump
+- available in all Unix-like systems
+- **Commands:**
+    - `which tcpdump` >> pour verifier si il est la
+
+    **Switches:**
+    - `D` >> to display available interfaces
+    - `i` >> to specify the interface
+    - `n` >> to disable naming resolution
+    - `e` >> to grab ethernet header along with upper-layer data
+    - `X` >> to show packet content in HEX and ASCII
+    - `XX` >> equal to ==`Xe` >>
+    - `v, vv, vvv` >> to show verbosity
+    - `c` >> to grab the specific number of packets then quit
+    - `s` >> to define how much of a packet to grab
+    - `S` >> to change relative sequence numbers to absolute sequence numbers
+    - `q` >> to print the less protocol info
+    - `r file.pcap` >> to read from the file
+    - `w file.pcap` >> to write to the file
+
+    **Absolute Sequence Numbers VS Relative**
+    - Absolute >> exact position of a byte in the data stream assigned by TCP to bytes
+    - Relative >> adjusted to start from zero for easier readability >>
+
+- **Run**
+    - `sudo tcpdump -i eth0`
+    - `sudo tcpdump -D`
+    - `sudo tcpdump -nvXe`
+
+    - `sudo tcpdump -w /tmp/file.pcap`
+    - `sudo tcpdump -r /tmp/file.pcap`
+
+- **TCPDump Shell Breakdown**
+    1. Timestamp
+    2. Protocol
+    3. Source & Destination: IP.Port
+    4. Flags
+    5. Sequence & ACK Numbers
+    6. Protocol Options >> *any negotiated TCP values established between the client and server,
+         such as window size, selective acknowledgments, window scale factors*
+    7. Notes & Header Information
+
+## Practical Challenges
+    1. Utilizing the output shown in question-1.png, who is the server in this communication? (IP Address)
+
+    **Solved:**
+    - I locate the info with TCP connection >>
+    - Random Port Numbers for usually Hosts & Known ports for Servers
+    - Public IP addresses vs Private IP address
+    - Voila, j'ai obtenu le drapeau
+
+    2. Were absolute or relative sequence numbers used during the capture? (see question-1.zip to answer)
+
+    **Solved:**
+    - I see the relative numbers since they are modified for better understanding
+    - Je sais que absolute numbers sont des chiffres original par TCP
+    - Voila, c'est fini!
+
+    3. If I wish to start a capture without hostname resolution, verbose output, showing contents in ASCII and hex, and grab the first 100 packets;
+       what are the switches used? please answer in the order the switches are asked for in the question.
+
+    **Solved:**
+    - Without HostName resolution >> -n
+    - Verbose >> -v
+    - Content in HEX or ASCII >> -X
+    - Grab specific number packets >> -c 100
+    - All together >> -nvXc 100
+    - Voila!
+
+    4. Given the capture file at /tmp/capture.pcap, what tcpdump command will enable you to read from the capture and
+       show the output contents in Hex and ASCII? (Please use best practices when using switches)
+
+    **Solved:**
+    - Je saie que je doit utiliser `sudo`
+    - `sudo tcpdump -Xr /tmp/capture.pcap`
+    - C'est dans le style de "best practices using switches"
+
+# Fundamentals Lab
+- **Practical Challenges:**
+    1. What TCPDump switch will allow us to pipe the contents of a pcap file out to another function such as 'grep'?
+
+    **Solved:**
+    - Il y a un switch appelle `-l` >> avec ca, c'est possible de faire `piping` quand on utilise
+        tcpdump en paralel
+    - `sudo tcpdump -i eth0 -l | grep -i "dns"`
+
+    2.  If we wished to filter out ICMP traffic from our capture, what filter could we use? ( word only, not symbol please.)
+
+    **Solved:**
+    - `not ICMP`
+
+# Packet Filtering Avec TCPDump
+- **Some Filters:**
+    - `host` >>  filter traffic to show anything involving the designated host. **Bi-directional**
+        - `sudo tcpdump -i eth0 host 172.16.18.8`
+
+    - `src/dest` >>  designate a source or destination host or port.
+        -  `sudo tcpdump -i eth0 src host 172.16.146.2`
+        -  `sudo tcpdump -i eth0 tcp src port 80`
+
+    - `net` >>  any traffic sourcing from or destined to the **network designated** >> **uses / notation.**
+        - `sudo tcpdump -i eth0 dest net 172.16.146.0/24`
+
+    - `proto` >> filter for a specific protocol, tcp[6], udp[17], or icmp[1]
+        - `sudo tcpdump -i eth0 udp`
+        - `sudo tcpdump -i eth0 proto 17`
+
+
+    - `port` >> port is bi-directional >> src et dest aussi
+        - `sudo tcpdump -i eth0 tcp port 443`
+
+    - `portrange` >> specify a range of ports. (0-1024)
+        - `sudo tcpdump -i eth0 portrange 0-1024`
+
+    - `less / greater` >> used to look for a packet or protocol option of a specific size.
+        - `sudo tcpdump -i eth0 less 64` >> to show packets less than 64 bytes
+        - `sudo tcpdump -i eth0 greater 500`
+
+    - `and / &&` >> concatenate two different filters together. for example, src host AND port.
+        - `sudo tcpdump -i eth0 host 192.168.0.1 and port 23`
+
+    - `or, not` >> either of two conditions, >>  saying anything but not x. For example, not UDP.
+        - `sudo tcpdump -r sus.pcap icmp or host 172.16.146.1`
+        - `sudo tcpdump not host 192.168.1.10`
+
+- **Tips:**
+    - `The -v, -X, and -e switches can help you increase the amount of data captured`
+    - **-c, -n, -s, -S, and -q switches can help reduce and modify the amount of data**
+    - `-A` switch >> show *only the ASCII* text after the packet line, instead of both ASCII and Hex
+    - `-l` >> allows us to send the output directly to another tool such as **grep using a pipe |**
+    - `sudo tcpdump -Ar http.cap -l | grep 'mailto:*'`
+
+- **Looking for TCP Protocol Flags:**
+    -  **standard TCP header layout:** >> *the first 20 bytes are structured as follows:*
+    Offset(Byte)	Field	              Size (bytes)
+
+      0–1	       Source Port	            2
+      2–3	       Destination Port	        2
+      4–7	       Sequence Number	        4
+      8–11	       Acknowledgment Number	4
+      12	       Reserved bits	        1
+      *13	       Flags (Control Bits)	    1*
+      14–15	       Window Size	            2
+      16–17	       Checksum	                2
+      18–19	       Urgent Pointer	        2
+
+    - **byte 13 is where all TCP flags like SYN, ACK, FIN, RST, etc. are stored**
+
+    - Point: We want to filter TCP SYN Flag where hunting TCP packets where the SYN flag is set.
+    - `sudo tcpdump -i eth0 'tcp[13] & 2 != 0'`
+        - `tcp[13]` >> refers to byte 13 of the TCP header
+        - "Flags" byte, where control flags like SYN, ACK, FIN, etc. are stored as bits.
+                Flag	Bit value	Position
+
+                CWR	    128	        Bit 7
+                ECE	    64	        Bit 6
+                URG	    32	        Bit 5
+                ACK	    16	        Bit 4
+                PSH	    8	        Bit 3
+                RST	    4	        Bit 2
+                SYN	    2	        Bit 1
+                FIN	    1	        Bit 0
+    - Suppose we have this flag byte in binary: `00000010`
+        - `the SYN bit (Bit 1) is set`. The value of this is: 2 in decimal >> 0x02 in hex
+        - So, to check if that bit is set, we use: `tcp[13] & 2 != 0`
+        - You’re checking `bit values`: 1 (FIN), 2 (SYN), 4 (RST), etc. >> These are powers of 2:
+        -
+        - **Bitwise AND: tcp[13] & 2**
+            - so in this case, the 13th byte as whole corresponds to one specific value of these flags
+            - my goal is to find whether this flag setting is only equal to the value of "SYN" flag
+            - For this, I know in advance that "SYN" has 2 value >> then
+            - I do *AND Bitwise* >> calculation with 0s and 1s >> if 0 0 = 0 or 1 1 = 1 >> otherwise 0
+            - How math is working: if SYN is set then 13th byte is by default = 2 in binary = `00000010`
+            - Okay then I am checking >> `00000010` & `00000010` = `00000010` (of course, the result will be 2)
+            - Then I know that this packet is what I look for >> with **SYN flag set, can be in combination with other flags also**
+            -
+            - Another example >> let's say when `ACK` Flag is set >> then we know `its value is 16`
+            - It means that now I should look for values when `13th byte` of TCP Header is equal to 16
+            - tcp[13] & 16 >> in binary >> `00010000`& `00010000` = `00010000` 16 >> here we go
+            - Now, if I find any packet with different Flag set >> let's say >> tcp[13] = 18
+            - tcp[13] = 18 >> I know that it's then **SYN+ACK** (2+16) = 18
+            - if we do bitwise AND between tcp[13] & 2 >> it gives me 0 >> says that
+            - Hey it's not only SYN set but SYN+ACK >> that's why get the fu*k out of here
+            - In binary >> 18= `00010010` & `00000010` == `00000010` >> equal to 2
+            - **Actually, here tcp[13] & 2 != 0 >> says that find me all packets which is associated
+                with "SYN" flag from 13th byte >> it could be "SYN" flag, also "SYN+ACK" since as
+                you see it's 18 >> but when we do "bitwise &" >> I got 2 >> making it positive to
+                find"**
+            - Now, if we want to look for packets with only SYN Flag set >> then
+            - **tcp[13] = 2** >> this will give me only packets with only "SYN" set not any others
+            - **tcp[13] = 18** >> only "SYN+ACK" cases
+
+
+    - Hunting For a SYN Flag
+        - `sudo tcpdump -i eth0 'tcp[13] &2 != 0'`
+## Practical Challenges
+    1. What filter will allow me to see traffic coming from or destined to the host with an ip of 10.10.20.1?
+
+    **Solved:**
+    - I know that we need something bi-directional >> avec `host`
+    - Voila >> c'est fini
+
+# Lab
+- **Task #1**
+    - Read a capture from a file without filters implemented.
+    - `sudo tcpdump -r TCPDump.pcap`
+
+- **Task #2**
+    - Identify the type of traffic seen.
+    - `sudo tcpdump -nr TCPDump-lab-2.pcap -tttt 'tcp[13] & 18 != 0'`
+    - Through this >> I am look for >> **SYN+ACK** connections for full TCP Handshake
+    - `-tttt` >> for full timestamp
+
+## Practical Challenges
+    1.  What are the client and server port numbers used in first full TCP three-way handshake? (low number first then high number)
+
+    **Solved:**
+    - `sudo tcpdump -nr TCPDump-lab-2.pcap -tttt 'tcp[13] & 18 != 0' `
+    - this command is the one which gives the info:
+    - also, need to check the flow >> SYN >> SYN+ACK >> ACK
+    - the last ACK (from the client) is what you need
+    - Voila, c'est fini
+
+    2. Based on the traffic seen in the pcap file, who is the DNS server in this network segment? (ip address)
+
+    **Solved:**
+    - it went easier since I know that the servers use the known ports while hosts use random ports
+    - there are not much traffic after applying the correct filters;
+    - `sudo tcpdump -nr TCPDump-lab-2.pcap tcp port 53 or udp port 53`
+    - Voila, J'ai obtenu le drapeau
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
