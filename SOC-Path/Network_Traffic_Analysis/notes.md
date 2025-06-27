@@ -260,6 +260,7 @@
     - `sudo tcpdump -Xr /tmp/capture.pcap`
     - C'est dans le style de "best practices using switches"
 
+
 # Fundamentals Lab
 - **Practical Challenges:**
     1. What TCPDump switch will allow us to pipe the contents of a pcap file out to another function such as 'grep'?
@@ -395,6 +396,12 @@
     - `sudo tcpdump -nr TCPDump-lab-2.pcap -tttt 'tcp[13] & 18 != 0'`
     - Through this >> I am look for >> **SYN+ACK** connections for full TCP Handshake
     - `-tttt` >> for full timestamp
+
+- **Task #3**
+    - Identify HTTP Methods:
+    - `sudo tcpdump -A -s 0 port 80 | grep -iE "OPTIONS|GET|PUT|POST|DELETE|HEAD"`
+    - `-s 0` >> when capturing HTTP, DNS >> to set >> snaplen >> snapshot length to the maximum is important
+        - this puts it to the max >> it captures the **entire packet**
 
 ## Practical Challenges
     1.  What are the client and server port numbers used in first full TCP three-way handshake? (low number first then high number)
