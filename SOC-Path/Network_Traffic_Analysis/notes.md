@@ -422,10 +422,108 @@
     - Voila, J'ai obtenu le drapeau
 
 
+# Wireshark
+- **Key Points:**
+    - Decryption capabilities for IPsec, ISAKMP, Kerberos, SNMPv3, SSL/TLS, WEP, and WPA/WPA2
+    - GUI >> Packet List >> Packet Details >> Packet Bytes
+    - **There already defined: capture filters and displayed filters which we can use**
+
+- **TShark**
+    - Terminal Version of Wireshark
+    **Switches:**
+    - `D` >> tos how available interfaces
+    - `L` >> Will list the Link-layer mediums you can capture from and then exit out.
+    - `i` >> choose the interface
+        - `sudo tshark -i eth0 -W /tmp/hello.pcap`
+
+    - `f` >> allows us to apply filters
+        - `sudo tshark -i eth0 -f "host 172.16.18.3"`
+
+    - `c` >> Grab a specific number of packets, then quit
+    - `a` >> Defines an `autostop` condition. Can be after a duration, specific file size, or after a certain number of packets.
+    - `r file.pcap` >> `W file.pcap`
+    - `P` >> Will print the packet summary while writing into a file (-W)
+    - `x` >> HEX & ASCII
+
+- **TermShark**
+    - Text-based User Interface (TUI) application
+    - **provides the user with a Wireshark-like interface right in your terminal window.**
 
 
+# Wireshark Advanced Usage
+- **Plugins:**
+    - `Analyze` & `Statistics` >> gives a bunch of plugins to run against the capture
 
+- **TCP Streams:**
+    - TCP Stream >> one full conversation >> consists of all packets associated with this one conversation between two hosts
+    - `Wireshark` >> can collect TCP packets back together to recreate the entire stream in a readable format
 
+    - **Follow TCP Stream**
+        - this feature is available for every TCP packets
+        - This ability also allows us to `pull data` (`images, files, etc.`) **out of the capture.**
+        - **This works for almost any protocol that utilizes TCP as a transport mechanism.**
+        - **Alternatively**
+        - `tcp.stream eq #` to find and track specific conversations captured in the pcap file.
+
+    - **Extracting Data and Files From a Capture**
+        - Select the File radial → Export → , then select the protocol format to extract from.
+
+- **FTP Filters**
+    - `ftp`
+    - `ftp.request.command`  >> port 21
+    - `ftp-data` >> port 20
+
+# Practical Challenges
+- **Part #1**
+    1. How many conversations can be seen?
+        **Solved:**
+            - TCP >> 5 conversations
+            - IPv4 >> 6 conversations
+
+    2. Can we determine who the clients and servers are?
+        **Solved:**
+            - 172.16.10.2 >> client >> 41524
+            - 172.16.10.20 >> server >> 80 >> FTP Server also
+            - 643 packets between them
+
+    3. Do FTP Analysis
+        **Solved:**
+            - Server >> 172.16.10.20
+            - Client >> 172.16.10.2
+            - User >> Anonymous
+
+    4. What protocols are being utilized?
+        **Solved:**
+            - TCP >> HTTP >> ICMP
+
+- **Part #2**
+    1. what is the issue?
+        **Solved:**
+        - suspicious traffic from the host 10.129.43.4
+
+    2. what we are looking for ?
+        *I am looking for any files associated with, hosts which communicated with it
+        Started: 2021-05-10 22:32:13 until 22:33*
+
+    3. Analyze the NTA
+        *I see that following TCP Streams >> commands are visible >> plaintext protocols are used
+        random high port numbers >> ephemeral >>*
+
+    4. Find the executed commands:
+        *TCP Stream >> shows all the info >> I got the honey*
+        - `net user hacker Passw0rd1 /add`
+        - `net localgroup administrators hacker /add`
+        -
+        - **Known port 4444 >> Meterpeter's port is used >> remote shell in-memory**
+
+- **Part #3 >> RDP**
+    1. Who is communicating with whom?
+        - Two hosts >> Started the conversation >> 10.129.43.27.50675 >> 10.129.43.29.3389
+
+    2. The account used >> DESKTOP-8BSUEVL/bucky >> Found through the ASCII Cookies part
+        Also findable through `Packet Details` >> rabbit holing you need to do.
+
+    3. Voila, Avec Wireshark, c'est fini pour ce Module! Bonne Chance!
 
 
 
