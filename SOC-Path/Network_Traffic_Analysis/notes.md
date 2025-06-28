@@ -525,7 +525,14 @@
 
     3. Voila, Avec Wireshark, c'est fini pour ce Module! Bonne Chance!
 
-
+# Decrypting RDP Connections
+- **Scenario:**
+    - When run the filter `rdp` >> ce ne peut donner plus d'information car il utilise TLS
+    - Need to do: `tcp.port == 3389`
+    - To see more >> **Provide the RDP-key to Wireshark so it can decrypt the traffic.**
+    -
+    - `go to Edit → Preferences → Protocols → TLS` >> then >> `Import An RDP Key`
+    - Voila, apres, >> maintenant plus d'information tu peux voir
 
 
 
