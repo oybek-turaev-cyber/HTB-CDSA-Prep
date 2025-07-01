@@ -209,14 +209,227 @@
     - C'etait interessant que il y a des ARP requests >>
     - Voila, la promiere demande avec ARP >> il m'a donne la reponse!
 
+# Detect Network Abnormalities
+
+- IP Layer >> to transfer packets from one hop to another
+- this layer has `no mechanisms` to identify when packets are `lost, dropped, or otherwise tampered with`
+
+## Fragmentation Attacks
+- **Packet Fields:**
+    - `Length` >> just IP Header Length
+    - `Total Length` >> entire length of the IP packet, including any relevant data.
+    - `Fragment Offset` >> this offset is to reassemble the packets upon delivery to the host
+
+- **Abuse of Fragmentation:**
+    - splitting the packets and reassembling them upon delivery
+    - Maximum Transmission Unit >> **MTU** >> the standard to divide these large packets into equal sizes to accommodate the entire transmission
+    - **last packet will likely be smaller** >> is just to give instructions how to reassemble the packets
+
+- **Commonly, attackers might abuse this field for the following purposes:**
+    1. `IPS/IDS Evasion` >> when IPS/IDS do not reassemble fragmented packets to inspect as a whole
+    2. `Firewall Evasion` >> Through fragmentation, an attacker could likewise evade a firewall's controls
+    3. `Firewall/IPS/IDS Resource Exhaustion` >> *Suppose an attacker were to craft their attack
+            to fragment packets to a very small MTU (10, 15, 20,) and so on*
+
+    - Usually >> MTU == 1500 bytes >> if MTU is 15 >>  A 1500-byte payload with MTU = 10 bytes = 150+ fragments!
+    - The packet gets broken into a huge number of tiny fragments.
+    - This causes for resource-intensive process
+
+    4. `Denial of Service` >> utilize fragmentation to send IP packets exceeding `65535 bytes` through ping or other commands.
+
+- **Solution:**
+    - **The IDS/IPS/Firewall should act the same as the destination host,
+    - in the sense that it waits for all fragments to arrive to reconstruct the transmission to perform packet inspection.**
+
+- **Detection:**
+    1. notice several ICMP requests going to one host from another
+    2. attacker might define a maximum transmission unit size >> `nmap -f 10 <host ip>`
+    3. a ton of fragmentation from a host can be an indicator of this attack
+    4. indicator of a fragmentation scan >> the single host to many ports responds
+
+- **Practical Challenge:**
+    1. Inspect the nmap_frag_fw_bypass.pcapng file, part of this module's resources, and
+       enter the total count of packets that have the TCP RST flag set as your answer.
+    -
+    **Solved:**
+    - J'ai compris que j'ai besoin de nombre des [RST] et aussi[ RST, ACK]
+    - Je sais que la valeur de [RST] flag >> 0x004 et [RST, ACK] >> 0x0014 car [ACK] est 0x0010
+    - Aller, je cris deux commands pour ca: `tcp.flags == 0x004 or tcp.flags == 0x0014`
+    - Voila, j'ai obtenu le nombre correcte de RST >> c'est fini!
+
+## IP Source & Destination Spoofing Attacks
+- **Key Practices:**
+    - Whenever consider IPv4 or IPv6 addresses in NTA:
+        1. **The Source IP Address should always be from our subnet**
+        2. **The Source IP for outgoing traffic should always be from our subnet**
+
+- **Attack Ways:**
+    1. `Decoy Scanning` >> to avoid firewalls >> attacker changes IP address to the one in the same
+       subnet as the target host >> it avoids firewall check
+
+    2. `Random Source Attack DDoS` >> random source hosts send traffic to one port of the targeted host
+
+    3. `LAND Attacks` >> when the source address is same as destination >> goal is DDoS
+
+    4. `SMURF Attacks` >> attacker chooses a victim >> victim is a source address holder
+       then >> source sends different large ICMP packets to many different hosts >> these hosts respond
+       to the source causing DDoS attack to the source (victim)
+
+- **Finding Decoy Scanning Attempts**
+    1. Strange Behaviour:
+        - Initial Fragmentation from a fake address
+        - Some TCP traffic from the legitimate source address
+
+    2. Fight:
+        - *Have our IDS/IPS/Firewall act as the destination host would*
+        - *Watch for connections started by one host, and taken over by another*
+
+- **Finding Random Source Attacks:**
+    1. Single Port Utilization from random hosts
+    2. Incremental Base Port with a lack of randomization
+    3. Identical Length Fields
+
+- **Finding Smurf Attacks:**
+    1. The attacker will send an ICMP request to live hosts with a spoofed address of the victim host
+    2. The live hosts will respond to the legitimate victim host with an ICMP reply
+    3. This may cause resource exhaustion on the victim host
+
+    4. *Sometimes attackers will include fragmentation and data on these ICMP requests to make the traffic volume larger.*
+
+- **Finding LAND Attacks:**
+    1. attacker spoofes the source IP address to be the same as the destination.
+    2. source uses different ports to "single port" of the destination
+
+- **Practical Challenge:**
+    1. Inspect the ICMP_smurf.pcapng file, part of this module's resources, and enter the total number of attacking hosts as your answer.
+
+    **Solved:**
+    - J'ai vu le soule IP address >> et voila c'est fini
+    - Pour ca, tu dois voir bien!!
+
+## IP Time-to-Live Attacks
+1. Set a very low TTL on their IP packets in order to attempt to evade firewalls, IDS, and IPS systems.
+2. The attacker will craft an IP packet with an intentionally low TTL value (1, 2, 3 and so on).
+3. Through each host that this packet passes through this TTL value will be decremented by one until it reaches zero.
+4. Upon reaching zero this packet will be discarded. The attacker will try to get this packet discarded
+    before it reaches a firewall or filtering system to avoid detection/controls.
+5. When the packets expire, the routers along the path generate ICMP Time Exceeded messages and send them back to the source IP address.
+
+- **Holy Goal >> is to analyze the network, mapping, knowing where the controls are**
+
+- Network Nmap >> port scanning tools
+
+## TCP Handshake Abnormalities
+- **TCP Flags:**
+    - `URG` >> This flag is to denote urgency with the current data in stream.
+    - `ACK` >> Acknowledges the receipt of the data
+    - `PSH` >> Push >> This flag instructs the TCP stack to immediately deliver the received data to the application layer, and bypass buffering
+        - buffering >> **temporary storage** >> where tcp data in OS level will be stored then delivered
+    - `ECN` >> Explicit Congestion Notification >> let the hosts know to avoid unnecessary re-transmissions.
+
+- **Strange Conditions:**
+    1. Too many flags of a kind or kinds
+    2. The usage of different and unusual flags
+    3. Solo host to multiple ports, or solo host to multiple hosts -
+
+    - **Excessive SYN Flags:**
+    1. `SYN Scans` - In these scans the behavior will be as we see, however the attacker will pre-emptively end the handshake with the RST flag.
+    2. `SYN Stealth Scans` >> *attacker will attempt to evade detection by only partially completing the TCP handshake.*
+
+    - **NO Flags:**
+    1. If the port is open - The system will not respond at all since there is no flags.
+    2. If the port is closed - The system will respond with an RST packet.
+
+    - **Too Many ACKs:**
+    1. If the port is open - The affected machine will either not respond, or will respond with an RST packet.
+    2. If the port is closed - The affected machine will respond with an RST packet.
+
+    - **Excessive FINs:**
+    1. If the port is open - Our affected machine simply will not respond.
+    2. If the port is closed - Our affected machine will respond with an RST packet.
+
+    - **Xmas Tree Scan:**
+    1. to throw spaghetti at the wall. In that case, they might utilize a Xmas tree scan >>  they put all TCP flags on their transmissions.
 
 
+- **Practical Challenge:**
+    1.  Inspect the nmap_syn_scan.pcapng file, part of this module's resources, and
+        enter the total count of packets that have the TCP ACK flag set as your answer.
+
+    **Solved:**
+    - Pour trouver ce drapeau >> je sais que [ACK] >> `tcp.flags == 0x0010` et un extra du ciel!!
+    - Voila, j'ai obtenu le drapeau
+
+## TCP Connection Resets & Hijacking
+    1. TCP does not provide the level of protection
+    2. from having their connections terminated or hijacked by an attacker. >> Malheuresement
+
+- **TCP Connection Termination:**
+    1. The attacker will spoof the source address to be the affected machine's
+    2. The attacker will modify the TCP packet to contain the RST flag to terminate the connection
+    3. The attacker will specify the destination port to be the same as one currently in use by one of our machines.
+
+    - **Detection:**
+        - *Suppose, the IP address 192.168.10.4 is registered to aa:aa:aa:aa:aa:aa in our network device list,
+          and we notice an entirely different MAC sending these like the following.*
+
+- **TCP Connection Hijacking:**
+    1. the attacker will actively monitor the target connection they want to hijack.
+    2. then conduct `sequence number prediction` in order to `inject their malicious packets` in **the correct order.**
+    3. During this injection they will spoof the source address to be the same as our affected machine.
+
+    **Key Point:**
+    1. The attacker will need to block ACKs from reaching the affected machine in order to continue the hijacking.
+        - *IF ACK reaches to the affected machine, then it disrupts the connection which attacker is
+            doing >> it's kinda a process man in the middle*
+    2. They do this either through delaying or blocking the ACK packets.
+
+    3. We may see as we saw in ARP Poisoning, that **TCP Retransmissions** >> [PSH, ACK]
+        - Here, as the server does not get the
+        - Why it happens since:
+            - *Out-of-order packets
+            - Bad TCP sequence numbers
+            - Confusion in the TCP stack*
+        - **As a result, the client does not receive expected acknowledgments, so it assumes:
+                “Packet was lost — let me send it again.”
+        - That’s why we see retransmissions in Wireshark.**
 
 
+- **Practical Challenge:**
+    1. Inspect the TCP-hijacking.pcap file, part of this module's resources, and
+       enter the username that has been used through the telnet protocol as your answer.
+
+    **Solved:**
+    - J'ai trouver ou Telnet Protocol etait >> apres >> j'ai teste les details
+    - TCP Stream >> Voila >> j'ai obtenu le drapeau
+
+## ICMP Tunneling
+- **Key Ideas:**
+    - Tunneling >> **to exfiltrate data from one location to another.**
+    - Mostly, attackers >> may utilize proxies to bypass our network controls, or protocols that our systems and controls allow.
+
+    - **SSH Tunneling, proxy-based, HTTP, HTTPs, DNS, and other types can be observed in similar ways** >>
+    - Why tunneling >> the idea is that >> to bypass normal network security controls >> and send
+        command & controls
+
+- **ICMP Tunneling:**
+    - an attacker will append data they want to exfiltrate to the outside world or another host in the data field in an ICMP request.
+    - **Normal ICPM request == 48 bytes**
+    - Seeing anything >> like **ICPM == 38000 bytes** >> super abnormal >> data appended to this request
+    - In wireshark >> need to check each packet >> details >>
+    - Sometimes, they are plain text and sometimes they are in encrypted version so that check them;
 
 
+- **Preventing ICMP Tunneling:**
+    1. Block ICMP Requests
+    2. Inspect ICMP Requests and Replies for Data - Stripping data, or inspecting data for malicious content on these requests
 
+- **Practical Challenge:**
+    1.  Enter the decoded value of the base64-encoded string that was mentioned in this section as your answer.
 
+    **Solved:**
+    - j'ai deja ca >> `echo 'VGhpcyBpcyBhIHNlY3VyZSBrZXk6IEtleTEyMzQ1Njc4OQo=' | base64 -d`
+    - Voila >> `This is a secure key: xxxxxxxxxxxx`
 
-
+# Application Layer Attacks
 
