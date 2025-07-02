@@ -825,7 +825,7 @@
        - C'est fini!
 
 # Skills Assessment
-    1. Inspect the funky_dns.pcap file, part of this module's resources, and enter the related attack as your answer.
+1. Inspect the funky_dns.pcap file, part of this module's resources, and enter the related attack as your answer.
 
     **Solved:**
     - Here is something wrong with DNS domain names >> something weird appended to the domain names >> encoded or encrypted
@@ -836,7 +836,7 @@
     - 10.0.2.30:44639 >> 10.0.2.20:53
     - Voila, c'est fini!
 
-    2. Inspect the funky_icmp.pcap file, part of this module's resources, and enter the related attack as your answer.
+2. Inspect the funky_icmp.pcap file, part of this module's resources, and enter the related attack as your answer.
 
     **Solved:**
     - J'ai utilise deux commandes pour identifier ICMP requests et replies:
