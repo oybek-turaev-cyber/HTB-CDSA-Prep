@@ -786,15 +786,41 @@
     Even if the original malicious node disappears, other nodes may still serve the file, making takedown and tracking difficult.
 
 ## Strange Telnet & UDP Connections
+- **What is Telnet?:**
+    - network protocol, 1970
+    - used for remote command and control
+    - tradition telnet protocol: port number: `23`
+    - unencrypted >> plaintext
 
+- **Unrecognized TCP Telnet in Wireshark:**
+    - Hey, Telnet is just a communication protocol >> can be **easily switched to other PORT by an attacker**
+    - Keep an eye on *Strange Port communications*
+    - `Follow > TCP Streams` >> look at strange port numbered communications
+    - Usually, Telnet >> used by `other TCP port numbers`
 
+- **Telnet Protocol through IPv6:**
+    - If you do not configure IPv6 >> then this communication is a sign of bad actions
+    - `((ipv6.src_host == fe80::c9c8:ed3:1b10:f10b) or (ipv6.dst_host == fe80::c9c8:ed3:1b10:f10b)) and telnet`
+    - `IPv6` >> can be used for **Telnet Tunneling:**
 
+- **Common Uses of UDP:**
+    1. `Real-Time Applications`
+    2. `DNS`
+    3. `DHCP`
+    4. `SNMP` >> Simple Network Management Protocol >> uses UDP for network monitoring and management
+    5. `TFTP` >> uses UDP for simple file transfers, commonly used by older Windows systems and others.
 
+- **Practical Challenge:**
+    1. Inspect the telnet_tunneling_ipv6.pcapng file, part of this module's resources, and enter the hidden flag as your answer.
+       Answer format: HTB(___) (Replace all spaces with underscores)
 
+       **Solved:**
+       - J'ai utilise just cette commande dan mon terminal de Wireshark: `telnet`
+       - Apres, J'ai vu que tout les packets sont avec des IPv6 addresses
+       - Apres, J'ai fait >> `Follow > TCP Stream` >> Voila >> J'ai trouve le drapeau
+       - C'est fini!
 
-
-
-
+# Skills Assessment
 
 
 
