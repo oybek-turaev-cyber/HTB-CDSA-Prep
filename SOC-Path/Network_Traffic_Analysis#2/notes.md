@@ -413,12 +413,14 @@
         command & controls
 
 - **ICMP Tunneling:**
-    - an attacker will append data they want to exfiltrate to the outside world or another host in the data field in an ICMP request.
+    - an attacker wants to exfiltrate data to the outside world or another host in the data field in an ICMP request.
     - **Normal ICPM request == 48 bytes**
     - Seeing anything >> like **ICPM == 38000 bytes** >> super abnormal >> data appended to this request
     - In wireshark >> need to check each packet >> details >>
     - Sometimes, they are plain text and sometimes they are in encrypted version so that check them;
-
+    - Point here >> **attacker sends small, normal-looking ICMP requests to the victim
+        - they include instructions, commands**
+    - **Then, victim sends large amount of data responding as a reply >> passwords, or other data the attacker wanted**
 
 - **Preventing ICMP Tunneling:**
     1. Block ICMP Requests
@@ -627,8 +629,7 @@
 
     **Solved:**
     - J'ai utilise ce process >>
-    - J'ai choisi le premier code >> avec GET` >> `Follow > HTTP Stream`
-    -
+    - J'ai choisi le premier code >> avec GET >> `Follow > HTTP Stream`
 
 ## SSL Renegotiation Attacks
 - **How HTTPs Works with Server?:**
@@ -713,6 +714,9 @@
 - **Finding DNS Enumeration Attempts:**
     1. `dns` >> look for any requests include >> **ANY** indication of DNS enumeration and possibly even subdomain enumeration
     2. Goal is to find all info: DNS Records, subdomains,
+    3. This attack is called **DNS Amplification**
+        - The idea >> sending small DNS request but respond will be more
+        - small request (e.g., 60 bytes) can trigger a much larger response (e.g., 4,000+ bytes), overwhelming the victim.
 
 - **Finding DNS Tunneling:**
     - Happens through the `TXT` record
@@ -821,10 +825,30 @@
        - C'est fini!
 
 # Skills Assessment
+    1. Inspect the funky_dns.pcap file, part of this module's resources, and enter the related attack as your answer.
 
+    **Solved:**
+    - Here is something wrong with DNS domain names >> something weird appended to the domain names >> encoded or encrypted
+        - laegpumiplhhpz12ynd1efljwlkjcgwy.pirate.sea: type NULL, class IN
+        - zi05aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ.pirate.sea
 
+    - Most likely, the attacker is performing >> DNS Tunelling >> exfiltrating data using dns
+    - 10.0.2.30:44639 >> 10.0.2.20:53
+    - Voila, c'est fini!
 
+    2. Inspect the funky_icmp.pcap file, part of this module's resources, and enter the related attack as your answer.
 
+    **Solved:**
+    - J'ai utilise deux commandes pour identifier ICMP requests et replies:
+        - `icmp.type == 8` et `icmp.type == 0`
+    - C'est bizzard que la taille normale pour ICMP request est environ 42 bytes ,
+    - Mais certains packets a la taille: 1500 bytes, 1700 bytes,
+    - Aussi, fragmented packets sont utilise, dont est super pas normal
+    - Je pense que parfois, l'attaquant a envoye les petites commandes mais la victime a repondu
+        avec de grandes reponses dont etait un signe de l'attaque
+    - Le but principle de l'attaquant est de performer l'exfiltration des donnees de la victime
+    - Voila >> Partie #2 10.13.37.145 >> l'attaquant, 192.168.178.34 >> la victime
+    - C'est fini!
 
 
 
