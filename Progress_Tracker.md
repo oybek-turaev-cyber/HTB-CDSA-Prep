@@ -68,6 +68,8 @@
     #8 >> Intermediate Network Traffic Analysis: Done on 02/07/2025
          https://academy.hackthebox.com/achievement/897337/229
 
+    #9 >> Working With IPS/IDS: Done on 05/07/2025
+         https://academy.hackthebox.com/achievement/897337/226
 
 
 
