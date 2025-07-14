@@ -71,6 +71,9 @@
     #9 >> Working With IPS/IDS: Done on 05/07/2025
          https://academy.hackthebox.com/achievement/897337/226
 
+    #10 >> Malware Analysis: Done on 14/07/2025
+         https://academy.hackthebox.com/achievement/897337/227
+
 
 
 
