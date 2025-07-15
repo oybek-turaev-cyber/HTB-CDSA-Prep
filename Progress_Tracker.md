@@ -74,6 +74,11 @@
     #10 >> Malware Analysis: Done on 14/07/2025
          https://academy.hackthebox.com/achievement/897337/227
 
+    #11 >> JavaScript Deobfuscation: Done on 15/07/2025
+         https://academy.hackthebox.com/achievement/897337/41
+
+
+
 
 
 
