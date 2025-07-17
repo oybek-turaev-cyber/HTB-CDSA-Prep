@@ -77,6 +77,9 @@
     #11 >> JavaScript Deobfuscation: Done on 15/07/2025
          https://academy.hackthebox.com/achievement/897337/41
 
+    #12 >> Yara & Sigma for SOC Analysts: Done on 17/07/2025
+         https://academy.hackthebox.com/achievement/897337/234
+
 
 
 
