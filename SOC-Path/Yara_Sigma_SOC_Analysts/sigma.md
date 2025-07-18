@@ -38,9 +38,8 @@
     falsepositives:
         - Unknown
     level: high
- ```
-    - `Detection:` >> two parts >> selection with Search Identifiers & condition
-
+    ```
+- `Detection:` >> two parts >> selection with Search Identifiers & condition
 
     - **Search Identifiers:**
         1. Lists (different options) >> the example in the below
