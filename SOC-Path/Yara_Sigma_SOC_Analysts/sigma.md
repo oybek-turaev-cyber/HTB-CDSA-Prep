@@ -219,10 +219,10 @@
         - `python sigmac -t splunk C:\Rules\notepad_susp_child.yml -c .\config\splunk-windows.yml`
 
     - Splunk:
-        ```code
-    (ParentImage="*\\notepad.exe" (Image="*\\powershell.exe" OR Image="*\\pwsh.exe"
-    OR Image="*\\cmd.exe" OR Image="*\\mshta.exe" OR Image="*\\cscript.exe" OR Image="*\\wscript.exe"
-    OR Image="*\\taskkill.exe" OR Image="*\\regsvr32.exe" OR Image="*\\rundll32.exe" OR Image="*\\calc.exe"))
+    ```code
+        (ParentImage="*\\notepad.exe" (Image="*\\powershell.exe" OR Image="*\\pwsh.exe"
+        OR Image="*\\cmd.exe" OR Image="*\\mshta.exe" OR Image="*\\cscript.exe" OR Image="*\\wscript.exe"
+        OR Image="*\\taskkill.exe" OR Image="*\\regsvr32.exe" OR Image="*\\rundll32.exe" OR Image="*\\calc.exe"))
     ```
 - Practical Challenge:
     1. Using sigmac translate the "C:\Rules\win_app_dropping_archive.yml" Sigma rule into the equivalent Splunk search.
