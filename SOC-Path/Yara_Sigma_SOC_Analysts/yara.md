@@ -269,6 +269,7 @@
     - Mais parmi ces, pour effacer/ supprimer, il doit utiliser `vssadmin.exe` ou `wmic >> shadowcopy` commande
     - Selon l'information, j'ai modifie mon fichier `.yar` pour chaque option:
     - Je n'ai pas trouve avec `vssadmin.exe` mais j'ai obtenu quelques informations avec `shadowcopy` suivante:
+    - J'ai utilise cette commande: `vol.py -f ./MemoryDumps/compromised_system.raw yarascan -U "shadowcopy"`
     ```code
         shadowcopy.delete.&.bcdedit./set  .{default}.boots  tatuspolicy.igno
         reallfailures.&.
