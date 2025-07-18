@@ -1,0 +1,16 @@
+title: LSASS Access with Rare GrantedAcces
+status: experimental
+description: This rule will detect when a process tries to access LSASS memory with suspicious access flag 0x1010
+date: 2023/07/08
+tags:
+    - attack.credential_access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        GrandtedAccess|endswith: '0x1010'
+    condition: selection
+
