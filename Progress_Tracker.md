@@ -80,6 +80,9 @@
     #12 >> Yara & Sigma for SOC Analysts: Done on 17/07/2025
          https://academy.hackthebox.com/achievement/897337/234
 
+    #13 >> Intro to Digital Forensics: Done on 22/07/2025
+         https://academy.hackthebox.com/achievement/897337/237
+
 
 
 
