@@ -747,7 +747,7 @@
         - **A critical takeaway from this API call is the lpData parameter:**
 
 ## Process Injection:
-    - In API Monitor tool, after loading API calls of the certain program or executable
+- In API Monitor tool, after loading API calls of the certain program or executable
 
     - To find the process injection cases:
         - Search for `CreateProcessA` function instances
@@ -814,52 +814,52 @@
 
 ## Memory Analysis with Volatility v3
 
-   - We got dumped memory file >> `PhysicalMemory.raw`
+- We got dumped memory file >> `PhysicalMemory.raw`
 
-    - Identifying the Memory Dump's Profile:
-        - `windows.info` plugin
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.info`
+- Identifying the Memory Dump's Profile:
+    - `windows.info` plugin
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.info`
 
-    - Identifying Injected Code:
-        - Using plugin `malfind`
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.malfind`
-        -
-        - **Key Point:**
-            - this plugin shows memory parts >> injected code also
-            - if you see `PAGE_EXECUTE_READWRITE` for the given process >> **ability to both execute and write to that memory region**
-            - It's **Red Flag** >> since usually processes need `READ` also code execution happens in
-                different part of the memory `execution`
+- Identifying Injected Code:
+    - Using plugin `malfind`
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.malfind`
+    -
+    - **Key Point:**
+        - this plugin shows memory parts >> injected code also
+        - if you see `PAGE_EXECUTE_READWRITE` for the given process >> **ability to both execute and write to that memory region**
+        - It's **Red Flag** >> since usually processes need `READ` also code execution happens in
+            different part of the memory `execution`
 
-    - Identifying Running Processes:
-        - `windows.pslist` plugin or `windows.pstree` for Tree View with parent-child relationships
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.pslist`
+- Identifying Running Processes:
+    - `windows.pslist` plugin or `windows.pstree` for Tree View with parent-child relationships
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.pslist`
 
-    - Identifying Process Command Lines:
-        - `windows.cmdline` plugin
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.cmdline`
+- Identifying Process Command Lines:
+    - `windows.cmdline` plugin
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.cmdline`
 
-    - Dumping Process Memory & Leveraging YARA:
-        - if the certain process is suspicious, possible to extract its own data
-        - `windows.memmap` >> plugin
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.memmap --pid 3648 --dump`
-        -
-        - Running YARA Rules using Powershell:
+- Dumping Process Memory & Leveraging YARA:
+    - if the certain process is suspicious, possible to extract its own data
+    - `windows.memmap` >> plugin
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.memmap --pid 3648 --dump`
+    -
+    - Running YARA Rules using Powershell:
         ```code
             - $rules = Get-ChildItem C:\Users\johndoe\Desktop\yara-4.3.2-2150-win64\rules | Select-Object -Property Name
             - foreach ($rule in $rules) {C:\yara-4.3.2-2150-win64\yara64.exe
               C:\yara-4.3.2-2150-win64\rules\$($rule.Name) C:\Users\johndoe\Desktop\pid.3648.dmp}
         ```
 
-    - Identifying Loaded DLLs:
-        - `windows.dlllist` can be specified for the specific process
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.dlllist --pid 3648`
+- Identifying Loaded DLLs:
+    - `windows.dlllist` can be specified for the specific process
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.dlllist --pid 3648`
 
-    - Identifying Handles:
-        - `windows.handles -p 3933`
+- Identifying Handles:
+    - `windows.handles -p 3933`
 
-    - Identifying Network Artifacts:
-        - `windows.netstat` or `windows.netscan` (comprehensive)
-        - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.netstat`
+- Identifying Network Artifacts:
+    - `windows.netstat` or `windows.netscan` (comprehensive)
+    - `python vol.py -q -f ..\memdump\PhysicalMemory.raw windows.netstat`
 
 ## Disk Image/Rapid Triage Data Examination & Analysis
 
