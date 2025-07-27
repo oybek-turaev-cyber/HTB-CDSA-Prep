@@ -12,6 +12,7 @@
     - Garde un oeil sur les commandes pour ler alerts: au-dessus
 
 ## User/Domain Reconnaissance Using BloodHound/SharpHound
+
 - Background Info:
     - `SharpHound.exe` is a collector for BloodHound
     - suspicious command: `.\Sharphound3.exe -c all`
@@ -107,6 +108,7 @@
         PC-2 | svchost.exe | 8888 → count = 1
     ```
 
+
 ## Practical Challenges:
 1. Modify and employ the Splunk search provided at the end of this section on all ingested data
    (All time) to find all process names that made LDAP queries where the filter includes the string *(samAccountType=805306368)*.
@@ -117,9 +119,51 @@
     -
     - Voila, ca y est, c'est fini!
 
+# Detecting Password Spraying Attack
+- Scenario:
+    - certain number of passwords to many accounts
+    - to avoid account locks
 
+    - Tool: `Spray` in Kali
 
+- Detection Techniques:
+    - Primarily >> `EventID 4625` >>
+    - Others:
+    ```code
+        4768 and ErrorCode 0x6 - Kerberos Invalid Users
+        4768 and ErrorCode 0x12 - Kerberos Disabled Users
 
+        4776 and ErrorCode 0xC000006A - NTLM Invalid Users
+        4776 and ErrorCode 0xC0000064 - NTLM Wrong Password
+
+        4648 - Authenticate Using Explicit Credentials
+
+        4771 - Kerberos Pre-Authentication Failed
+    ```
+
+- Detection with Splunk:
+    - Command:
+        ```code
+            index=main earliest=1690280680 latest=1690289489 source="WinEventLog:Security"
+            | bin span=15m _time
+            | stats values(user) as users, dc(user) as dc_count by src, Source_Network_Address, dest, EventCode, Failure_Reason
+        ```
+
+    - It is working within time limit
+    - `bin span=15m _time` >> it's grouping events within 15m time buckets >> kinda putting alerts
+        happened 15 mins intervals >> groups by this feature
+    - Then `stats` creates specific `groups or combinations`  based on source, source IP address, destination and
+        eventcode and failure message.
+    - For each this combination >> it calculates unique values of `user` field by function `values()` and
+        - `dc()` function counts the unique number of `user` field for `each group or combination`
+
+- Practical Challenge:
+    1. Employ the Splunk search provided at the end of this section on all ingested data (All time) and
+       enter the targeted user on SQLSERVER.corp.local as your answer.
+
+    **Solved:**
+    - J'ai utilise cette commande au-dessus et j'ai debarasse les restrictions de temps
+    - J'ai obtenu le drapeau et Voila, ca y est, c'est fini!
 
 
 
