@@ -199,6 +199,7 @@
             - The attacker is ready to accept any requests from those protocols
             - Now, as a defender >> we list non-existant hosts / file shares and run them in every host in the network
             - The expected response should fail, If not, if it succeeds >> then it's a **red flag** for us about the attacker
+            - Refer to the `./LLMNR_detecter.ps1` for the Powershell Script
 
 - Detecting Responder-like Attacks With Splunk:
     - Methods:
