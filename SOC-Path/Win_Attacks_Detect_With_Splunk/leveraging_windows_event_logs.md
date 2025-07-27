@@ -165,6 +165,105 @@
     - J'ai utilise cette commande au-dessus et j'ai debarasse les restrictions de temps
     - J'ai obtenu le drapeau et Voila, ca y est, c'est fini!
 
+# Detecting Responder-like Attacks
+- LLMNR / NBT-NS / mDNS Poisoning:
+    - `LLMNR` >> Link-Local Multicast Name Resolution: `UDP 5335`
+    - `NBT-NS` >> NetBIOS Name Service: `UDP 137`
+
+    - Usage:
+        - Used to resolve hostnames to IPs on local networks when FQDN(DNS) fails
+        - They have some inefficiencies >> so that attackers use them
+
+    - Tool:
+        - `Responder` >> **To execute LLMNR, NBT-NS, or mDNS poisoning.**
+
+    - Scenario:
+        - **They will be used when the Main DNS fails ? Then when DNS fails? When it could not find
+            the requested hostname then LLMNR / NBT-NS / mDNS come to action**
+        - Steps:
+            - Victim send mistyped hostname `filesharea` query to DNS
+            - DNS cannot resolve this >> then one of the 3 brothers come to solve: `LLMNR / NBT-NS / mDNS`
+            - The attacker responds to `LLMNR / NBT-NS / mDNS` requests >> pretending to be the server of this mistyped host
+            - The system is now poisoned communicating with adversary-controlled system
+
+    - Attack Goal:
+        - To obtain `NetNTLM Hashes` or  NTLM-based credentials
+
+- Responder Detection Opportunities:
+    - Two Methods:
+        - Employ net monitor solutions for **unusual LLMNR and NBT-NS traffic patterns** >>
+           such as *an elevated volume of name resolution requests from a single source.*
+        -
+        - **HoneyPot** >> Normally, requests for non-existant hosts / file shares should fail!
+            - If the attacker is present in the env for `LLMNR / NBT-NS ` spoofing >>
+            - The attacker is ready to accept any requests from those protocols
+            - Now, as a defender >> we list non-existant hosts / file shares and run them in every host in the network
+            - The expected response should fail, If not, if it succeeds >> then it's a **red flag** for us about the attacker
+
+- Detecting Responder-like Attacks With Splunk:
+    - Methods:
+        1. `Sysmon ID-22` >> shows *DNS queries* to **non-existent or mistyped file shares**
+            ```code
+                    index=main earliest=1690290078 latest=1690291207 EventCode=22
+                    | table _time, Computer, user, Image, QueryName, QueryResults
+            ```
+        2. `EventID 4648` >> **logs events when credentials are explicitly used to access network resources**
+            - Yes, the logs can be for legit servers/resources
+            - Also for **suspicious or strange/fake file shares /resources by the attacker** also
+            - Our Goal is to find the suspicious cases of when credentials are explicitly used (NTLM credentials for example)
+            ```code
+                    index=main earliest=1690290814 latest=1690291207 EventCode IN (4648)
+                    | table _time, EventCode, source, name, user, Target_Server_Name, Message
+                    | sort 0 _time
+            ```
+                - `EventCode=4648  equal to  EventCode IN (4648)`
+                - However, `IN (...)` is used for multiple options, usually not single
+
+- Practical Challenges:
+    1. Modify and employ the provided Sysmon Event 22-based Splunk search on all ingested data (All time)
+    to identify all share names whose location was spoofed by 10.10.0.221.
+    Enter the missing share name from the following list as your answer. myshare, myfileshar3, _
+
+    **Solved:**
+    - J'ai utilise cette commande:
+        ```code
+            index=main earliest=169029078 latest=1690291207 EventCode=22
+            | table _time, Image, User, QueryName, QueryResults
+            | where like(QueryResults, "%10.10.0.221%")
+        ```
+    - La partie de ce code: `where like(...)` est tres utile pour trouver tous les trois resultats
+    - Voila, ca y est, c'est fini!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
