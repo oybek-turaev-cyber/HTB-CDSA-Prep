@@ -402,7 +402,7 @@
    - Voila, ma commande: `index=main EventCode=1 "7136"`
    - Ca y est, c'est fini!
 
-# Detecting Pass-the-Hash
+# Detecting Pass-The-Hash
 - Idea:
     - uses user's `NTLM Hash` to authenticate
     - takes it from memory with `mimikatz`
@@ -499,4 +499,98 @@
     - J'ai utilise la commande ci-dessus et apres j'ai obtenu le drapeau
     - Voila, ca y est!
 
-#
+# Detecting Pass-The-Ticket
+- Idea:
+    - lateral movement technique
+    - abuses `TGT` or `TGS` tickets
+    - Uses These Tickets to authenticate without knowing user's passwords
+
+- Steps:
+    - firstly, attacker should gain administrative  access to a system
+    - secondly, it uses `rubeus` or `mimikatz` to extract valid `TGT` or `TGS` tickets from the **compromised system's memory**
+        - `rubeus.exe monitor /interval:30`
+    - thirdly, attacker submits the extracted ticket to the current logon session using `rubeus.exe`
+        - `rubeus.exe ptt /ticket:my_ticket_plain_sattered_format`
+        - check with `klist` >> you see the active `administrator session`
+
+- Kerberos Authentication Process:
+    1. User logs on >> asks `TGT` with `NTLM Hash`
+    2. Receives `TGT` **encrypted with krbtgt hash**
+    3. **The TGT is like a sealed letter — the user carries it but can’t open it. Only Kerberos can read it (because it holds the key = KRBTGT hash).**
+    4. Requests `TGS` with obtained `TGT`
+    5. Now Receives `TGS` encrypted with **hash** of `service account password`
+    6. Then client connects to the server with `TGS`
+
+- For Detection: Helpful Events:
+    - `4648` >>> *Explicit Credential Logon Attempt: password, usernames are used*
+    - `4624`
+    - `4672` >> *Special Logon: special privileges, such as running applications as an administrator*
+    - `4768` >> TGT >> `4769` >> TGS
+    - `4770` >> TGS was renamed
+
+## Pass-the-Ticket Detection Opportunities
+- Possible Techniques:
+    1. For the attack `Pass-The-Ticket` >> Kerberos Authentication is **partial**
+        - without `TGT` >> it starts right away from `TGS`
+        - so need look for `4769 and 4770` without prior `4768` *from the same system within a specific time window.*
+
+    2. Mismatch between `Host ID` and `Service ID` from `4769` and the `actual Source and Destination IPs` **in Event ID 3**
+        - Check these credentials from `4769` & `Sysmon 3`
+        - *When mismatch happens >> when attacker takes the tickets from one machine >> then may use it from another machine*
+        - *Admin logs into Machine A*
+            - Ticket is in memory (LSASS) of Machine A
+            - Attacker on Machine A dumps the ticket
+            - Attacker reuses it:
+            - on Machine A (silent PtT)
+            - *or Machine B (causes mismatch)*
+
+    3. Pre-Authentication Failure  `4771`:
+        - `Pre-Authentication Type = 2`
+            - → Means client used **Encrypted Timestamp** for login
+        - `Failure Code = 0x18`
+            - → Means **"Pre-auth info was invalid"** (couldn’t decrypt timestamp)
+        - Why suspicious?
+            - Happens when attacker **injects a fake or invalid ticket**
+            - Or uses wrong password/hash to generate timestamp
+            - KDC can't decrypt it → login fails
+        - How to Detect:
+            - Look for 4771 events with **Pre-auth type 2 + Failure 0x18**
+            - Can signal **forged ticket**, **brute-force**, or **PtT gone wrong**
+
+## Detecting Pass-the-Ticket With Splunk
+- Command:
+    ```code
+        index=main earliest=1690392405 latest=1690451745 source="WinEventLog:Security" user!=*$ EventCode IN (4768,4769,4770)
+        | rex field=user "(?<username>[^@]+)"
+        | rex field=src_ip "(\:\:ffff\:)?(?<src_ip_4>[0-9\.]+)"
+        | transaction username, src_ip_4 maxspan=10h keepevicted=true startswith=(EventCode=4768)
+        | where closed_txn=0
+        | search NOT user="*$@*"
+        | table _time, ComputerName, username, src_ip_4, service_name, category
+    ```
+
+    - Here, `transaction` >> *groups events into transactions based on the username and src_ip_4 fields.*
+    - `keepevicted=true` >> *ensures that open transactions without an ending event are included in the results.*
+    - `where closed_txn=0` >> **filters the results to include only open transactions, which do not have an ending event.**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
