@@ -573,7 +573,47 @@
     - `keepevicted=true` >> *ensures that open transactions without an ending event are included in the results.*
     - `where closed_txn=0` >> **filters the results to include only open transactions, which do not have an ending event.**
 
+# Detecting Overpass-the-Hash
+- Goal:
+    - Attacker obtains the `NTLM Hah` then creates `TGT` using this hash
+    - So, it has full Kerberos Authenticated `TGT`
+    - It doesn't know the password of the user
 
+- Attack Steps:
+    - Use `mimikatz` to obtain `NTLM Hash` >> *attacker must have at least local administrator privileges on*
+    - Use `Rubeus.exe` to ask `TGT` **craft a raw AS-REQ request for a specified user to request a TGT ticket**
+
+- Detection:
+    - When `Rubeus` works >> it sends `AS-REQ` request directly to DC
+    - So it communicates by `TCP/UDP port 88`
+    - Goal is to detect this connection from unusual process except `lsass.exe` which is legit
+
+- Command:
+    ```code
+        index=main earliest=1690443407 latest=1690443544 source="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+        (EventCode=3 dest_port=88 Image!=*lsass.exe) OR EventCode=1
+        | eventstats values(process) as process by process_id
+        | where EventCode=3
+        | stats count by _time, Computer, dest_ip, dest_port, Image, process
+        | fields - count
+    ```
+
+- Practical Challenge:
+    1. Employ the Splunk search provided at the end of this section on all ingested data (All time) to find all involved images (Image field).
+       Enter the missing image name from the following list as your answer. Rubeus.exe, _.exe
+
+       **Solved:**
+       - J'ai utilise cette commande ci-dessus et apres, j'ai trouve le drapeau
+       - J'ai cherche le process sauf `lsass.exe`
+
+# Pass-The-Hash VS Pass-The-Ticket VS Overpass-The-Hash
+    ```code
+        | Attack Type        | Input Used      | Protocol | Goal                      | Tools Used      |
+        | ------------------ | --------------- | -------- | ------------------------- | --------------- |
+        | Pass-the-Hash      | NTLM Hash       | NTLM     | Log in / run commands     | runas, mimikatz |
+        | Pass-the-Ticket    | Kerberos Ticket | Kerberos | Access services           | mimikatz::ptt   |
+        | Over-Pass-the-Hash | NTLM Hash → TGT | Kerberos | Forge full Kerberos login | mimikatz::pth   |
+    ```
 
 
 
