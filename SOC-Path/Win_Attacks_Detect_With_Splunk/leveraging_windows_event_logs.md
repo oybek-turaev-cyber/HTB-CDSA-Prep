@@ -390,7 +390,6 @@
             | table _time, src_ip, user, Pre_Authentication_Type, Ticket_Options, Ticket_Encryption_Type
         ```
     - `Pre_Authentication_Type = 0` >> c'est joli!
-
 ## Practical Challenges:
 1. Modify and employ the Splunk search provided at the "Detecting Kerberoasting - SPN Querying" part of this section on all ingested data (All time).
    Enter the name of the user who initiated the process that executed an LDAP query containing the
@@ -403,20 +402,101 @@
    - Voila, ma commande: `index=main EventCode=1 "7136"`
    - Ca y est, c'est fini!
 
+# Detecting Pass-the-Hash
+- Idea:
+    - uses user's `NTLM Hash` to authenticate
+    - takes it from memory with `mimikatz`
 
+- Steps:
+    - run `mimikatz.exe` > `sekurlsa::logonpasswords` to get the NTLM hash
+    - attacker authenticates with this hash for the user
+        - `sekurlsa::pth /Administrator /ntlm:obtained_hash /domain:corp.local`
+    - with `authenticated session` now, moves freely in network: accessing resources:
+        - `dir \\dc01\c$`
 
+- Windows Access Tokens:
+    - `access token` is security context of a process or a thread
+        - it contains info about associated user's account identity / privileges
+        - when a user is logged in, system generates a `access token`
+        - `any process` user access >> takes this `access token`
 
+- Alternate Credentials:
+    - **goal here to execute certain commands / or access resources as different users**
+    - It happens **without logging out or switching accounts** just in the current session
+    - way to do it `runas` >> corresspondingly, `new access token` is then generated for this user
+        - `runas /user:lab.internal.local\Administrator cmd.exe`
+    - you can verify the new user with `whoami`
 
+- **runas:**
+    - it has  `/netonly` flag >> *the specified user information is for remote access only*
+        - `runas /user:lab.internal.local\Administrator /netonly cmd.exe`
 
+    - **Key Point:**
+        - each `access token` has a `LogonSession` data info generated at user logon
+        - This `LogonSession` structure contains info: `Username, Domain, and AuthenticationID (NTHash/LMHash)`
+            - You log in → A LogonSession is created.
+            - Any app or process you launch uses your Access Token, tied to that session.
+            - That token controls who you are to the OS and when accessing remote resources.
+        - This `LogonSession` is used when **the process accesses remote resources**
+        -
+        - **Another Point:** when `runas /netonly` is used
+        - we run process locally but saying Windows to use different user credentials
+        - OS uses **Same Access Token → Local behavior doesn't change.**
+        - But **But: a second LogonSession is created with different network credentials.**
+        - So then here, `LogonSession` is different
 
+## Pass-the-Hash Detection Opportunities
+- Goal:
+    - Need to catch `runas` usage:
+        - without `/netonly` flag >> `4624` and `LogonType 2` (interactive) is logged
+        - with `/netonly` flag >> `4624` and `LogonType 9` (NewCredentials) is logged
 
+## Detecting Pass-the-Hash With Splunk
+- Command:
+    ```code
+        index=main earliest=1690450708 latest=1690451116 source="WinEventLog:Security" EventCode=4624 Logon_Type=9 Logon_Process=seclogo
+        | table _time, ComputerName, EventCode, user, Network_Account_Domain, Network_Account_Name, Logon_Type, Logon_Process
+    ```
+    - Here `Logon_Process=seclogo`
+        - `seclogo` is Logon Process Name >> Windows uses to label `Logon_Type 9`
+        - `Logon_Type=9` >> which is `NewCredentials` used
+        - **"seclogo" just tells you the logon was through this NewCredentials method.**
 
+- **Here is Logic:**
+    - When the hash is obtained >> user cannot easily use it to access
+    - It needs to use `mimikatz` since authentication is like this for windows:
+        - **Windows wants: A password, or >> A Kerberos ticket, or >>A valid authentication session already loaded in memory**
+    - Then, attacker needs to change `memory` to fake credentials or to create new one
+    - specifically what process the attacker access: `lsass memory`
+        - `Inject the hash into memory (LSASS)`
+        - `Create a fake LogonSession or modify an existing one`
+        - `This tricks Windows into thinking the user is already logged in`
+- Now:
+    - by knowing about this >> attacker needs to access `lsass`, we track it
+    - With `Sysmon 10` *Process Access*
 
+- Better Command:
+        ```code
+            index=main earliest=1690450689 latest=1690451116 (source="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=10
+            TargetImage="C:\\Windows\\system32\\lsass.exe" SourceImage!="C:\\ProgramData\\Microsoft\\Windows Defender\\platform\\*\\MsMpEng.exe")
+            OR (source="WinEventLog:Security" EventCode=4624 Logon_Type=9 Logon_Process=seclogo)
+            | sort _time, RecordNumber
+            | transaction host maxspan=1m endswith=(EventCode=4624) startswith=(EventCode=10)
+            | stats count by _time, Computer, SourceImage, SourceProcessId, Network_Account_Domain, Network_Account_Name, Logon_Type, Logon_Process
+            | fields - count
+        ```
 
+    - Here, `transaction host maxspan=1m endswith=(EventCode=4624) startswith=(EventCode=10)`
+        - **Groups related events based on the host field**
+        - *command is used to associate process access events targeting lsass.exe with remote logon events.*
+    - `fields - count` >> removes `count` field from the results
 
+## Practical Challenge:
+1. A Pass-the-Hash attack took place during the following timeframe earliest=1690543380 latest=1690545180.
+   Enter the involved ComputerName as your answer.
 
+    **Solved:**
+    - J'ai utilise la commande ci-dessus et apres j'ai obtenu le drapeau
+    - Voila, ca y est!
 
-
-
-
-
+#
