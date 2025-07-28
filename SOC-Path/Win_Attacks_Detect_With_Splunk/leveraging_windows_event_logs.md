@@ -615,17 +615,101 @@
         | Over-Pass-the-Hash | NTLM Hash → TGT | Kerberos | Forge full Kerberos login | mimikatz::pth   |
     ```
 
+# Detecting Golden Tickets/Silver Tickets
+- Goal:
+    - Forges `TGT` to access AD as Domain Administrator
 
+- Attack Steps:
+    - Extract `NTLM Hash` of `KRBTGT account` using: `DCSync` OR *On DC, they can dump 'NTDS.dit' or LSASS process*
+    - Armed with `KRBTGT Hash`, **attacker forges a TGT for an arbitrary user account with admin privileges** using `mimikatz`
+        - `kerberos::golden ...`
+    - Then in injects the obtained `TGT` in the current session using `ptt`
 
+- Golden Ticket Detection Opportunities:
+    - Problem: `TGT` obtain can be offline >> no traces of `mimikatz`
 
+    - Key: Look How `KRBTGT Hash` can be obtained:
+        - DCSync
+        - NTDS.dit file access
+        - LSASS memory read on DC `Sysmon 10`
 
+## Detecting Golden Tickets With Splunk (Yet Another Ticket To Be Passed Approach):
+- Command:
+    ```code
+        index=main earliest=1690451977 latest=1690452262 source="WinEventLog:Security" user!=*$ EventCode IN (4768,4769,4770)
+        |rex field=user "(?<username>[^@]+)"
+        | rex field=src_ip "(\:\:ffff\:)?(?<src_ip_4>[0-9\.]+)"
+        | transaction username, src_ip_4 maxspan=10h keepevicted=true startswith=(EventCode=4768)
+        | where closed_txn=0
+        | search NOT user="*$@*"
+        | table _time, ComputerName, username, src_ip_4, service_name, category
+    ```
 
+## Silver Ticket
+- Goal:
+    - IF the attacker has the `password hash` of a **target service account (e.g., SharePoint, MSSQL)**
+    - He tries to forge `TGS` known as Silver Tickets
+    - It can `impersonate any user`
+    - Its limit is only `service single: e.g: MSSQL`
 
+- Steps:
+    - Extracts `NTLM Hash` of **service account** OR `NTLM Hash` of **computer account for CIFS access**
+    - sometimes, no user log in the machine so no info in memory >> then *computer account* is also used for CIFS Access
+        - `CIFS` (Common Internet File System) >> older version of `SMB` >> **file-sharing protocol, used by Windows to access network resources**
+        - exmaples: `CIFS/server.domain.com` >> *Kerberos ticket for accessing file share on that server*
 
+    - Using extracted `NTLM Hash` with `mimikatz` >> attacker creates `Silver Ticket` with `TGS` for specified service
+    - Then injects forged `TGS` in the `ptt`
 
+- Silver Ticket Detection Opportunities:
+    - Sometimes, with Silver & Golden Ticket Attacks, attacker can use any user >> it can create `a new user`
+    - To track this `4720` >> *A user account was created*
+    - Also: `4672` (Special Logon: with admin privileges)
 
+## Detecting Silver Tickets With Splunk
+- Create `user.csv` with event id `4720`: new user was created
+    ```code
+        index=main latest=1690448444 EventCode=4720
+        | stats min(_time) as _time, values(EventCode) as EventCode by user
+        | outputlookup users.csv
+    ```
+- Add this list to Splunk >> `Settings -> Lookups -> Lookup table files -> New Lookup Table File.`
 
+- Let's now compare the list above with logged-in users as follows:
+    ```code
+        index=main latest=1690545656 EventCode=4624
+        | stats min(_time) as firstTime, values(ComputerName) as ComputerName, values(EventCode) as EventCode by user
+        | eval last24h = 1690451977
+        | where firstTime > last24h
+       ```| eval last24h=relative_time(now(),"-24h@h") `'``
+        | convert ctime(firstTime)
+        | convert ctime(last24h)
+        | lookup users.csv user as user OUTPUT EventCode as Events
+        | where isnull(Events)
+    ```
+    - Ultimate goal: **Find unknown or suspicious logons from accounts not recently created**
+    -
+    - `eval last24h =` >> assigns it a specific timestamp value. This value represents a time threshold for filtering the results.
+    - `where firstTime > last24h` >> filters the results to include only logins that occurred after the time threshold defined in last24h.
+        - yeah, `firstime` happened later >> that's why bigger
+    - `eval last24h=relative_time(now(),"-24h@h")` >> *redefine the last24h variable to be exactly 24 hours before the current time*
+    - `lookup users.csv user as user OUTPUT EventCode as Events`
+        - `lookup <lookupfile> <lookup_field> as <search_field> OUTPUT <lookup_output_field> as <output_field>`
+        - *matches the user field from the search results with the user field in the CSV file*
+    - `| where isnull(Events)` >> only  those where the Events field is null
+        - *This indicates that the user was not found in the users.csv file. so it's created before*
 
+- Detecting Silver Tickets With Splunk By Targeting Special Privileges Assigned To New Logon:
+    - Command:
+        ```code
+            index=main latest=1690545656 EventCode=4672
+            | stats min(_time) as firstTime, values(ComputerName) as ComputerName by Account_Name
+            | eval last24h = 1690451977
+            ```| eval last24h=relative_time(now(),"-24h@h") `'``
+            | where firstTime > last24h
+            | table firstTime, ComputerName, Account_Name
+            | convert ctime(firstTime)
+        ```
 
 
 
