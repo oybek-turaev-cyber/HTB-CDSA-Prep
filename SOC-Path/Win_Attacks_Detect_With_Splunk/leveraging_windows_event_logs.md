@@ -25,25 +25,26 @@
     - Use this and plus, `YARA` rules
 
     - **The list of LDAP filters frequently used by Reconnaissance Tools.**
-        ```code
+    ```code
         Recon Tool                     >>           Filter
 
-    enum ad user comments (Metasploit) >> (&(&(objectCategory=person)(objectClass=user))(|(description=*pass*)(comment=*pass*)))
-    enum ad computers (Metasploit)     >> (&(objectCategory=computer)(operatingSystem=*server*))
-    enum ad groups (Metasploit)        >> (&(objectClass=group))
-    enum ad managedby_groups (MetSp)   >> (&(objectClass=group)(managedBy=*)),
+        enum ad user comments (Metasploit) >> (&(&(objectCategory=person)(objectClass=user))(|(description=*pass*)(comment=*pass*)))
+        enum ad computers (Metasploit)     >> (&(objectCategory=computer)(operatingSystem=*server*))
+        enum ad groups (Metasploit)        >> (&(objectClass=group))
+        enum ad managedby_groups (MetSp)   >> (&(objectClass=group)(managedBy=*)),
                                           (&(objectClass=group)(managedBy=*)(groupType:1.2.840.113556.1.4.803:=2147483648))
 
-    Get-NetComputer (PowerView)        >> (&(sAMAccountType=805306369)(dnshostname=*))
-    Get-NetUser - Users (Powerview)    >> (&(samAccountType=805306368)(samAccountName=*))
-    Get-NetUser - SPNs (Powerview)     >> (&(samAccountType=805306368)(servicePrincipalName=*))
-    Get-DFSshareV2 (Powerview)         >> (&(objectClass=msDFS-Linkv2))
-    Get-NetOU (PowerView)              >> (&(objectCategory =organizationalUnit)(name=*))
+        Get-NetComputer (PowerView)        >> (&(sAMAccountType=805306369)(dnshostname=*))
+        Get-NetUser - Users (Powerview)    >> (&(samAccountType=805306368)(samAccountName=*))
+        Get-NetUser - SPNs (Powerview)     >> (&(samAccountType=805306368)(servicePrincipalName=*))
+        Get-DFSshareV2 (Powerview)         >> (&(objectClass=msDFS-Linkv2))
+        Get-NetOU (PowerView)              >> (&(objectCategory =organizationalUnit)(name=*))
 
-    Get-DomainSearcher (Empire)        >> (samAccountType=805306368)
+        Get-DomainSearcher (Empire)        >> (samAccountType=805306368)
     ```
 
     - To find these events, I can use those filters to trigger the incidents:
+
 
 ## Detecting User/Domain Recon With Splunk
 - Scenario:
