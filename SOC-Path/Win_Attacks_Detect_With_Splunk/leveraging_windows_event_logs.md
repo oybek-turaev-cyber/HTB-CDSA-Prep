@@ -711,10 +711,58 @@
             | convert ctime(firstTime)
         ```
 
+# Detecting Unconstrained Delegation/Constrained Delegation Attacks
+## Unconstrained Delegation:
+- Goal:
+    - *Allowing a service to authenticate to another resource on behalf of any user*
+        - Example: `a web server requires access to a database server to make changes on a user's behalf.`
+    - This service is a good location for the Attacker to obtain higher privileges
+    - Because, whoever comes to this `unconstrained delegation enabled` service comes with both `TGS` and embedded `TGT`
 
+- Steps:
+    1. The attacker identifies systems on which Unconstrained Delegation is enabled for service accounts.
+        - *An attacker with just domain user access can find machines with unconstrained delegation*
+    2. Then attacker needs to access this machine (another way of hacking, RDP or etc ) for unconstrained delegation enabled
+    3. The attacker waits for someone log in that environment: log in >> meaning that in memory: TGT tickets
+        As it's in `Unconstrained Delegation`
+        - **Kerberos Authentication: functions in different way:**
+            - When `TGS` is returned by KDC to user >> it comes with embedded `TGT` of the user
+            - So that that `this service` can **act on behalf of that user** using `TGT` embedded in `TGS`
+    4.
+        ```code
+                1. User sends TGS request to Domain Controller for HOST/SQLSERVER.
 
+                2. DC notices that SQLSERVER has unconstrained delegation enabled.
 
+                3. DC adds the user’s TGT inside the TGS.
 
+                4. DC sends the TGS (with embedded TGT) back to the user.
 
+                5. User sends the TGS (now carrying TGT) to SQLSERVER.
+
+                6. SQLSERVER stores this TGT in memory (LSASS).
+
+                7. Attacker who controls SQLSERVER dumps it with Mimikatz.
+
+                8. Attacker can now impersonate that user anywhere.
+        ```
+
+- Unconstrained Delegation Attack Detection Opportunities:
+    - Need to check `Powershell Script Block Logging:` `4104`
+    - **PowerShell commands and LDAP search filters used for Unconstrained Delegation discovery**
+
+    - Goal: *to retrieve and reuse TGT tickets, so Pass-the-Ticket detection can be used as well.*
+
+## Detecting Unconstrained Delegation Attacks With Splunk
+- Command:
+    ```code
+        index=main earliest=1690544538 latest=1690544540 source="WinEventLog:Microsoft-Windows-PowerShell/Operational"
+        EventCode=4104 Message="*TrustedForDelegation*" OR Message="*userAccountControl:1.2.840.113556.1.4.803:=524288*"
+        | table _time, ComputerName, EventCode, Message
+    ```
+
+    - `userAccountControl:1.2.840.113556.1.4.803:=524288` >>  LDAP filter indicating the `TRUSTED_FOR_DELEGATION` flag is set
+
+# Constrained Delegation
 
 
