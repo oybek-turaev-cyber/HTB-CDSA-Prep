@@ -618,6 +618,7 @@
 # Detecting Golden Tickets/Silver Tickets
 - Goal:
     - Forges `TGT` to access AD as Domain Administrator
+    - The attacker uses the `krbtgt hash` to forge a `TGT` for **any user**, with any privileges (even Domain Admin), and the KDC will trust it.
 
 - Attack Steps:
     - Extract `NTLM Hash` of `KRBTGT account` using: `DCSync` OR *On DC, they can dump 'NTDS.dit' or LSASS process*
@@ -795,7 +796,7 @@
     - To request `TGS` using `S4U` technique, `Rubeus` uses **TCP/UDP 88 Kerberos port** to DC
 
 ## Detecting Constrained Delegation Attacks With Splunk
-    - Command with Powershell Logs:
+- Command with Powershell Logs:
         ```code
             index=main earliest=1690544553 latest=1690562556 source="WinEventLog:Microsoft-Windows-PowerShell/Operational"
             EventCode=4104 Message="*msDS-AllowedToDelegateTo*"
@@ -803,7 +804,7 @@
         ```
         - `4104` >> Powershell Script Block Code Event
 
-    - Command with Sysmon Logs:
+- Command with Sysmon Logs:
         ```code
             index=main earliest=1690562367 latest=1690562556 source="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
             | eventstats values(process) as process by process_id
@@ -823,14 +824,103 @@
     - J'ai utilise la commande ci-dessus mais j'ai enleve time constrictions
     - Et voila, ca y est, j'ai trouve le drapeau
 
+# Detecting DCSync / DCShadow
+- Goal:
+    - Extract password hashes from DC
+    - With that `Replication Directory Changes` permission
+
+- Attack Steps:
+    1. Attacker secures administrative access to a domain-joined system
+    2. Or escalates privileges to acquire the requisite rights to request replication data.
+    3. With tools `Mimikatz` the attacker requests **domain replication data** by using the `DRSGetNCChanges` interface
+    4. This interface helps **effectively mimicking a legitimate domain controller.**
+        - `lsadump::dcsycn /domain:lab.internal.local /user:krbtgt`
+        - It gives the `NTML Hash` of `krbtgt account`
+    5. Later, attacker may **craft Golden Tickets, Silver Tickets, or opt to employ Pass-the-Hash/Overpass-the-Hash attacks.**
+
+- DCSync Detection Opportunities
+    - Idea:
+        - `4662` >> *an object in Active Directory is accessed or modified, and specific permissions (like read or write) are used.*
+            - In our case, it shows *DS-Replication-Get-Changes* in `Operations` property
+            - In `Operations`, if you see GUID `{1131f6aa-9c07-11d1-f79f-00c04fc2dcd2}` >> this is `DS-Replication-Get-Changes`
+
+## Detecting DCSync With Splunk
+- Command:
+        ```code
+            index=main earliest=1690544278 latest=1690544280 EventCode=4662 Message="*Replicating Directory Changes*"
+            | rex field=Message "(?P<property>Replicating Directory Changes.*)"
+            | table _time, user, object_file_name, Object_Server, property
+        ```
+
+## DCShadow
+- Goal:
+    - advanced technique
+    - creates a rogue DC to make changes throughout the whole domain
+    - without producing standard security logs.
+    - leverages `Directory Replicator` permission >> *customarily granted to domain controllers for replication tasks*
+    - To register a rogue DC >> attacker needs admin privileges `either Domain or local to the DC) or the KRBTGT hash.`
+    - It also leaves traces in **creation of new server and nTDSDSA objects in the Configuration partition of the AD schema**
+
+- Attack Steps:
+    1. Attacker secures `administrative access to a domain-joined system` or escalates for this
+    2. Attacker registers `rogue DC` within Domain, leveraging the **Directory Replicator** permission
+    3. Then, executes changes to AD objects >> *modifying user groups to Domain Administrator groups.*
+        - `lsadump::dcshadow /object:JENNY_HICKMAN /attribute:primaryGroupID /value:512` with *mimikatz*
+    4. The Rogue DC initiates replication with legit DCs making changes across the domain:
+        - `lsadump:dcshadow /push`
+
+- DCShadow Detection Opportunities:
+    1. To create a Rogue DC: certain changes in AD take place:
+        - **Add a new nTDSDSA object**
+        - **Append a Global Catalog ServicePrincipalName to the computer object**
+
+    2. `Event 4742` >> Computer account was changed >>  **logs changes related to computer objects** including `ServicePrincipalName`
+
+- What is `nTDSDSA`? thing:
+    - it is *Directory Replication Agent* object >> it should be created to create a rogue DC
+    - **It tells AD, “I’m a DC, and I do replication.”**
+    - DCShadow creates this fake object, making AD think the attacker’s machine is also a DC.
+
+- Then, Global Catalog SPNs
+    - Then >> DCs use SPNs like `GC/hostname` or `LDAP/hostname` for Kerberos.
+    - **These tell the system, “this computer runs DC services.”**
+    - **DCShadow adds these SPNs to the attacker's computer object, so the fake DC looks real**
+
+- What is **Global Catalog? and GC SPNs?**
+    - `Global Catalog` >> special role on DC
+    - *Stores partial info about all objects in the forest (not just one domain).*
+    - *Used to quickly search across domains (e.g., find a user or group).*
+
+- **Why attackers add GC/hostname SPNs:**
+    - DCs with the GC role register the `GC/host` SPN.
+    - **To pretend to be a full DC, the attacker must add this SPN — otherwise, AD won't treat them like a legit Global Catalog server.**
+    - *Adding GC/host SPN is part of the DC disguise*
+    - it tricks Kerberos and AD into thinking the attacker's machine is a `real, searchable DC.`
+
+- Following this:
+    - Event ID `4742`: Triggers when a *computer account is changed*, including SPNs.
+    - If you see a **sudden SPN** like `GC/suspicioushost` it’s a red flag.
+
+## Detecting DCShadow With Splunk:
+- Command:
+    ```code
+        index=main earliest=1690623888 latest=1690623890 EventCode=4742
+        | rex field=Message "(?P<gcspn>XX\/[a-zA-Z0-9\.\-\/]+)"
+        | table _time, ComputerName, Security_ID, Account_Name, user, gcspn
+        | search gcspn=*
+    ```
+    - It is extracting new field `gcspn` from `Message` field
+    - Garde un oeil `GC/suspicioushost` >> Look for this
 
 
+## Practical Challenge:
+1. Modify the last Splunk search in this section by replacing the two hidden characters (XX)
+    to align the results with those shown in the screenshot. Enter the correct characters as your answer.
 
-
-
-
-
-
-
-
+    **Solved:**
+    - J'ai utilise mon enquete ci-dessus pour comprendre entierement:
+    - Et j'ai analyse trois events
+    - C'est important que le premier event est inutile >> donc regarder aux le deuxieme et troisieme events
+    - `Message` Field est un bon endroit pour analyser
+    - Voila, ca y est, c'est fini!
 
