@@ -764,5 +764,73 @@
     - `userAccountControl:1.2.840.113556.1.4.803:=524288` >>  LDAP filter indicating the `TRUSTED_FOR_DELEGATION` flag is set
 
 # Constrained Delegation
+- Goal:
+    - Any **User or Computer Account** >> they have `SPNs` set in their `msDS-AllowedToDelegateTo` property.
+    - These accounts can access to certain specified services
+
+- Attack Steps:
+    - Identify systems with `Constrained Delegation` & which resources they are enabled
+    - The attacker then should move to that system
+    - The attacker should take `TGT` of **User or Computer Account** from the memory using `Rubeus` or `Mimikatz` or requested with principal's hash
+    - The attacker uses impersonation technique **S4U** to request `TGS` for that specific service which is specified in `constrained delegation`
+    - Then, attacker does `/ptt`
+
+## S4U >> Service For User  >> Kerberos Protocol Extensions
+- Two Types:
+    - `S4U2self` >> Service For User to Self >> **allows a service to obtain a TGS for itself on behalf of a user**
+    - `S4U2proxy` >> Service For User to Proxy >> **allows the service to obtain a TGS on behalf of a user for a second service.**
+
+- Key Points:
+    - `S4U2self` is designed to allow a service to ask `TGS` **even if that user did not login with Kerberos**
+    - **This TGS ticket can be requested on behalf of any user, for example, an Administrator.**
+        - The attacker now knows the `TGT` of that service account or computer account who has `delegation credentials`
+        - Then it asks the `TGS` to that `service` on behalf of any user
+
+    - With `S4U2proxy` >> lets a service use a user’s `TGS` ticket (from S4U2Self) to **access other services on that user's behalf**
+    - but only to services listed in `msDS-AllowedToDelegateTo.`
+    - Together, **S4U2Self + S4U2Proxy = full impersonation to certain services.**
+
+- Constrained Delegation Attack Detection Opportunities:
+    - Possible with Powershell and LDAP  queries
+    - To request `TGS` using `S4U` technique, `Rubeus` uses **TCP/UDP 88 Kerberos port** to DC
+
+## Detecting Constrained Delegation Attacks With Splunk
+    - Command with Powershell Logs:
+        ```code
+            index=main earliest=1690544553 latest=1690562556 source="WinEventLog:Microsoft-Windows-PowerShell/Operational"
+            EventCode=4104 Message="*msDS-AllowedToDelegateTo*"
+            | table _time, ComputerName, EventCode, Message
+        ```
+        - `4104` >> Powershell Script Block Code Event
+
+    - Command with Sysmon Logs:
+        ```code
+            index=main earliest=1690562367 latest=1690562556 source="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+            | eventstats values(process) as process by process_id
+            | where EventCode=3 AND dest_port=88
+            | table _time, Computer, dest_ip, dest_port, Image, process
+        ```
+        - `Sysmon 3` > Network Connection, Destinied To Kerberos `88`
+
+
+
+## Practical Challenge:
+1.  Employ the Splunk search provided at the "Detecting Unconstrained Delegation Attacks With Splunk"
+    part of this section on all ingested data (All time). Enter the name of the other computer on which there
+    are traces of reconnaissance related to Unconstrained Delegation as your answer. Answer format: _.corp.local
+
+    **Solved:**
+    - J'ai utilise la commande ci-dessus mais j'ai enleve time constrictions
+    - Et voila, ca y est, j'ai trouve le drapeau
+
+
+
+
+
+
+
+
+
+
 
 
