@@ -86,8 +86,11 @@
     #14 >> Detecting Windows Attacks With Splunk: Done on 30/07/2025
          https://academy.hackthebox.com/achievement/897337/233
 
+    #15 >> Security Incident Reporting: Done on 30/07/2025
+         https://academy.hackthebox.com/achievement/897337/path/390
 
-
+    ### Finally  >> SOC Path >> Done on 30/07/2025
+         https://academy.hackthebox.com/achievement/897337/path/390
 
 
 
