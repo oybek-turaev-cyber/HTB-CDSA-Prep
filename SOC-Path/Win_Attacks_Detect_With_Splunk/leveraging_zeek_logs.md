@@ -229,12 +229,43 @@
     - J'ai ajoute just cette partie: `id.orig_p` et `id.resp_p`
     - Voila, c'est fini!
 
+# Detecting Cobalt Strike's PSExec
+- Goal:
+    - `PSExec` >> *lightweight telnet-replacement that lets you execute processes on other systems.*
+    - Cobalt Strike uses this tool
+    - `PSExec` works over `445` >> **SMB**
+
+- How it works:
+    1. `Service Creation` >> It creates a `new service` on a target system >> this service later `execute the payload`
+        - usually comes with random_name
+    2. `File Transfer` >> payload transfer occurs to the target system >> often to `ADMIN$` share by `SMB` protocol
+    3. `Service Execution` >> newly created service is started >> executed payload (shellcode, executable, or any file type)
+    4. `Service Removal` >> after the payload is executed, the service is deleted from the system >> no traces
+    5. `Communication` >> if it's a becon connection
+
+- Detecting Cobalt Strike's PSExec With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="cobalt_strike_psexec"
+            sourcetype="bro:smb_files:json"
+            action="SMB::FILE_OPEN"
+            name IN ("*.exe", "*.dll", "*.bat")
+            path IN ("*\\c$", "*\\ADMIN$")
+            size>0
+        ```
+
+    - Garde un oeil sur le `SMB` et ses actions: `FILE_OPEN`
+
+- Practical Challenge:
+    1. Use the "change_service_config" index and the "bro:dce_rpc:json" sourcetype to create a Splunk search
+       that will detect SharpNoPSExec (https://gist.github.com/defensivedepth/ae3f882efa47e20990bc562a8b052984).
+       Enter the IP included in the "id.orig_h" field as your answer.
+
+    - J'ai trouve que je doit chercher `svcctl` et
+    - Apres, j'ai ajoute `id.orig_h` et `id.resp_h` pour montrer les resultats
+    - Et voila, ca y est, c'est fini!
+
 #
-
-
-
-
-
 
 
 
