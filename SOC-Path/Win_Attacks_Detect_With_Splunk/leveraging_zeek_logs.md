@@ -98,12 +98,43 @@
         ```
     - Cela fonctionne bien! Voila, j'ai obtenu le drapeau!
 
+# Detecting Nmap Port Scanning
+- Goal
+    - Nmap scans multiple ports
+    - Packet Nmap sends to the target is equal to `0` bytes
+
+- Detecting Nmap Port Scanning With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="cobaltstrike_beacon" sourcetype="bro:conn:json" orig_bytes=0 dest_ip IN (192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8)
+            | bin span=5m _time
+            | stats dc(dest_port) as num_dest_port by _time, src_ip, dest_ip
+            | where num_dest_port >= 3
+        ```
+    - Here, In Zeek Logs: `id.orig_h` >> source IP  >> initiator >> `id.resp_h` >> dest IP >> the target
+    - But here, src_ip shows us the attacker IP and dest IP is victim or target
+    - The victim IP is in internal range of IPs
+    - Window for 5 minutes
+    - For each combination group of events by `_time, src_ip, dest_ip` > `dc` counts distinct number of dest_ports accessed for each combination
+    - if num_dest_port is greater 3 >> meaning that at least nmap should try 3-4 different ports scan
+
+- Practical Challenge:
+1.  Use the "cobaltstrike_beacon" index and the "bro:conn:json" sourcetype. Did the attacker scan port 505? Answer format: Yes, No
+
+    **Solved:**
+    - Pour reponder efficacement, j'ai decide que je dois utiliser cette commande:
+        ```code
+            index="cobaltstrike_beacon" sourcetype="bro:conn:json"
+            | where dest_port = "505"
+            | bin _time span=5m
+            | stats count by _time, src_ip, dest_ip, dest_port
+        ```
+    - Avec ca, d'abbord, j'ai obtenu tous les evenements avec `505`
+    - Apres, j'ai cree la fenetre de 5 minutes
+    - Et je compte combien d'evenements pendent la fenetre pour chaque combination: `_time, src_ip, dest_ip, dest_port`
+    - Voila, ca y est, c'est fini! J'ai trouve le drapeau!
+
 #
-
-
-
-
-
 
 
 
