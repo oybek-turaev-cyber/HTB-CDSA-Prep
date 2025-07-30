@@ -45,14 +45,60 @@
     - Voila, apres, il me montre seulement quand `total_attempts` est grand que le chiffre 30
     - Voila, ca y est, c'est fini! J'ai trouve le drapeau!
 
+# Detecting Beaconing Malware
+- Goal
+    - C2 communication with the victim
+    - protocols: `HTTP/HTTPS, DNS, ICMP`
 
+- Example:
+    - `C2 Framework` >> *Cobalt Strike*
 
+- Detecting Beaconing Malware With Splunk & Zeek Logs:
+    - Command:
+        ```code
+                index="cobaltstrike_beacon" sourcetype="bro:http:json"
+                | sort 0 _time
+                | streamstats current=f last(_time) as prevtime by src, dest, dest_port
+                | eval timedelta = _time - prevtime
+                | eventstats avg(timedelta) as avg, count as total by src, dest, dest_port
+                | eval upper=avg*1.1
+                | eval lower=avg*0.9
+                | where timedelta > lower AND timedelta < upper
+                | stats count, values(avg) as TimeInterval by src, dest, dest_port, total
+                | eval prcnt = (count/total)*100
+                | where prcnt > 90 AND total > 10
+        ```
 
+    - Here, `sort 0 _time` >> shows unlimited time outputs `0` no restrict
+    - `| streamstats current=f last(_time) as prevtime by src, dest, dest_port`
+        - For the combination src, dest, dest_port, for each event, it calculates previous time
+    - `eval timedelta = _time - prevtime` >> computes time difference between current and previous events' timestamps
+    - after this, with `eventstats` >> *Calculates the average time difference (avg) and
+    - the total number of events (total) for each combination of src, dest, and dest_port.*
+    - Then it creates boundries >> lower >> upper
+    - filters events based on these boundries
+    - After this filter, it counts the number of elements again for each combination:
+        - `src, dest, dest_port, and total.`
+    - Then, it calculates what percentage the filtered events out of total events
+    - if the filtered events > 90 while total events > 10 >> it shows only those
 
+- Practical Challenge:
+1. Use the "cobaltstrike_beacon" index and the "bro:http:json" sourcetype.
+   What is the most straightforward Splunk command to pinpoint beaconing from the 10.0.10.20 source to the 192.168.151.181 destination?
+   Answer format: One word
 
+   **Solved:**
+    - J'ai utilise la logique que je dois chercher le google pour Splunk Commandes pour ca
+    - Et apres, j'ai trouve que `t***c****` est une bonne option pour obtenir les meilleurs resultats
+    - Ma commande:
+        ```code
+            index="cobaltstrike_beacon" sourcetype="bro:http:json"
+            | search src=10.0.10.20 dest=192.168.151.181
+            | t***c**** span=30m count
+        ```
+    - Cela fonctionne bien! Voila, j'ai obtenu le drapeau!
 
-
-
+#
 
 
 
