@@ -203,6 +203,32 @@
     - J'ai utilise la commande ci-dessus mais j'ai ajoute aussi cette partie: `id.resp_p` et `id.orig_p`
     - Voila, j'ai trouve le port necessaire!
 
+# Detecting Golden Tickets
+- Goal:
+    - The case is that attacker bypasses the usual Kerberos Authentication
+    - Since it has already forged `TGT` using `krbtgt hash` that's why `AS-REQ` and `AS-RESP` are not initiated / seen
+    - `In-Pass-The-Ticket` also >> attacker steals a valid `TGT`
+
+- Detection:
+    - Pay attention to `TGS-REQ` and `TGS-REP` requests
+
+- Command:
+    ```code
+        index="golden_ticket_attack" sourcetype="bro:kerberos:json"
+        | where client!="-"
+        | bin _time span=1m
+        | stats values(client), values(request_type) as request_types, dc(request_type) as unique_request_types by _time, id.orig_h, id.resp_h
+        | where request_types=="TGS" AND unique_request_types==1
+    ```
+    - It removes `clients` with empty info
+
+- Practical Challenge:
+    1. What port does the attacker use for communication during the Golden Ticket attack?
+
+    **Resolu:**
+    - J'ai ajoute just cette partie: `id.orig_p` et `id.resp_p`
+    - Voila, c'est fini!
+
 #
 
 
