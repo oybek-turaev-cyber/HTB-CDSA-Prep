@@ -346,7 +346,38 @@
         - J'ai fait finalement la convertion
         - Voila, ca y est, c'est fini!
 
-#
+# Detecting Exfiltration (DNS)
+- Process:
+    1. `Initial Compromise` >>  gains access to the victim's network >> via malware, phishing
+    2. `Data Identification & Prep` >> locates the data they want >> involves encoding or encrypting the data and splitting it into small chunks.
+    3. `Exfiltration via DNS` >> **sends the data in the subdomains of DNS queries**
+        - *DNS tunneling or fast flux*
+        - usually in `A` section of `DNS`
+
+- Detecting DNS Exfiltration With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index=dns_exf sourcetype="bro:dns:json"
+            | eval len_query=len(query)
+            | search len_query>=40 AND query!="*.ip6.arpa*" AND query!="*amazonaws.com*" AND query!="*._googlecast.*" AND query!="_ldap.*"
+            | bin _time span=24h
+            | stats count(query) as req_by_day by _time, id.orig_h, id.resp_h
+            | where req_by_day>60
+            | table _time, id.orig_h, id.resp_h, req_by_day
+        ```
+    - filtering out normal traffic
+    - 24-h time window
+    - grouping events by source & dest IPs >> counting number of `queries` between those hosts
+    - checking higher data size > 60
+
+- Practical Challenge:
+    1. Use the "dns_exf" index and the "bro:dns:json" sourcetype. Enter the attacker-controlled domain as your answer.
+
+    **Resolu:**
+    - J'ai utilise la commande ci-dessus et j'ai obtenu le drapeau
+    - Voila, la vie est belle!
+
+# Detecting Ransomware
 
 
 
