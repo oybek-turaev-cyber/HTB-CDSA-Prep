@@ -378,12 +378,78 @@
     - Voila, la vie est belle!
 
 # Detecting Ransomware
+- Attack Types:
+    1. `File Overwrite Approach`
+        - Usually >> attacker connects the target >> do these steps: via `SMB`
+            - `Enumerate Files`
+            - `Read File` >> `SMB::FILE_OPEN`
+            - `Encrypt File` >> encryption in memory
+            - `Write File` >> `SMB::FILE_RENAME` >> write encrypted data to the same file
 
+    2. `File Renaming Approach`
+        - Key Difference here >> files will get **Extension**
+            - `Enumerate Files`
+            - `Read File` >> `SMB::FILE_OPEN`
+            - `Encrypt File` >> encryption in memory
+            - `Write File With Specific Extension` >> `SMB::FILE_RENAME` >> write encrypted data to the same file
 
+- Detecting Ransomware With Splunk & Zeek Logs (Excessive Overwriting):
+    - Command:
+        ```code
+            index="ransomware_open_rename_sodinokibi" sourcetype="bro:smb_files:json"
+            | where action IN ("SMB::FILE_OPEN", "SMB::FILE_RENAME")
+            | bin _time span=5m
+            | stats count by _time, source, action
+            | where count>30
+            | stats sum(count) as count values(action) dc(action) as uniq_actions by _time, source
+            | where uniq_actions==2 AND count>100
+        ```
+        - detecting action with two operations
+        - during 5 minutes >> if more than 30 >> count >> then ransomware is here
+        - grouping events in this window by time and source >> for this, calculate sum of how many
+            times these events occurred
+        - if unique actions two as expected >> then the ransomware is doing its job
 
+- Detecting Ransomware With Splunk & Zeek Logs (Excessive Renaming With The Same Extension):
+    - Command:
+        ```code
+            index="ransomware_new_file_extension_ctbl_ocker" sourcetype="bro:smb_files:json" action="SMB::FILE_RENAME"
+            | bin _time span=5m
+            | rex field="name" "\.(?<new_file_name_extension>[^\.]*$)"
+            | rex field="prev_name" "\.(?<old_file_name_extension>[^\.]*$)"
+            | stats count by _time, id.orig_h, id.resp_p, name, source, old_file_name_extension, new_file_name_extension,
+            | where new_file_name_extension!=old_file_name_extension
+            | stats count by _time, id.orig_h, id.resp_p, source, new_file_name_extension
+            | where count>20
+            | sort -count
+        ```
+        - extracts extensions from `name` and `prev_name` fields
+        - count events for the combination of groups >> source & dest IPs, by two extensions
+            - This shows extension change actions for how many files
+        - after this, to make sure extensions are newly created >> check they are not equal
+        - then give how many new file extensions created
+        - if the number > 20 >> montrer
 
+- Practical Challenge:
+    1. Modify the action-related part of the Splunk search of this section that detects excessive file overwrites
+       so that it detects ransomware that delete the original files instead of overwriting them.
+       Run this search against the "ransomware_excessive_delete_aleta" index and the "bro:smb_files:json" sourcetype.
+       Enter the value of the "count" field as your answer.
 
-
+       **Resolu:**
+       - Pour resondre ca, il faut analyser la question:
+       - Et donc, j'ai modifie la commande comme ca:
+            ```code
+                index="ransomware_open_rename_sodinokibi" sourcetype="bro:smb_files:json"
+                | where action IN ("SMB::FILE_OPEN", "SMB::FILE_DELETE")
+                | bin _time span=5m
+                | stats count by _time, source, action
+                | where count>30
+                | stats sum(count) as count values(action) dc(action) as uniq_actions by _time, source
+                | where uniq_actions==2 AND count>100
+            ```
+        - Just, j'ai change `SMB::FILE_DELETE` >> parceque la question a demande ca
+        - Voila, ca y est, c'est fini!
 
 
 
