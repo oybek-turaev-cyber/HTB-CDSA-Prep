@@ -134,11 +134,45 @@
     - Et je compte combien d'evenements pendent la fenetre pour chaque combination: `_time, src_ip, dest_ip, dest_port`
     - Voila, ca y est, c'est fini! J'ai trouve le drapeau!
 
+# Detecting Kerberos Brute Force Attacks
+- Goal:
+    - To enumerate KDC to know what usernames are valid in the system
+    - Attacker sends `AS-REQ` request >> Response from KDC reveals more stuff
+    - If the `AS-REP` == `KRB5KDC_ERR_PREAUTH_REQUIRED` >> the username **exists** but needs authentication
+    - If the `AS-REP` == `KRB5KDC_ERR_C_PRINCIPAL_UNKNOWN` >> no valid username
+
+- Detecting Kerberos Brute Force Attacks With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="kerberos_bruteforce" sourcetype="bro:kerberos:json"
+            error_msg!=KDC_ERR_PREAUTH_REQUIRED
+            success="false" request_type=AS
+            | bin _time span=5m
+            | stats count dc(client) as "Unique users" values(error_msg) as "Error messages" by _time, id.orig_h, id.resp_h
+            | where count>30
+        ```
+    - This detection query >> filters out `KDC_ERR_PREAUTH_REQUIRED` based events >> since
+    - Because we are only interested in `KRB5KDC_ERR_C_PRINCIPAL_UNKNOWN`
+    - It counts the events based on each group combination of `_time, id.orig_h, id.resp_h`
+    - dc(client) makes sure that distinct clients
+
+- Practical Challenge:
+    1.  Use the "kerberos_bruteforce" index and the "bro:kerberos:json" sourcetype.
+        Was the "accrescent/windomain.local" account part of the Kerberos user enumeration attack? Answer format:
+
+    **Solved:**
+    - J'ai utilise cette commande:
+        ```index
+            index="kerberos_bruteforce" sourcetype="bro:kerberos:json"
+            error_msg!=KDC_ERR_PREAUTH_REQUIRED
+            success="false" request_type=AS
+            client=accrescent/windomain.local
+            stats count by _time, id.orig_h, id.resp_h
+        ```
+    - Voila, j'ai ajoute just cette partie >> `client=accrescent/windomain.local`
+    - Voici, ca y est, c'est fini!
+
 #
-
-
-
-
 
 
 
