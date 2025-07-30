@@ -172,12 +172,38 @@
     - Voila, j'ai ajoute just cette partie >> `client=accrescent/windomain.local`
     - Voici, ca y est, c'est fini!
 
+# Detecting Kerberoasting
+- Goal:
+    - When attacker compromises one account & its password, it can ask `SPN`
+    - It can request `Service Principal Names` from AD >> domain-joined anyone can do that
+    - Then, it sends `AS-TGS` request to the Kerberos with found `SPN`
+    - When Kerberos replies with `REP-TGS` >> here Kerberos does some key thing:
+    - **Kerberos sends `TGS-REP` with the hash of service account password**
+    - Attacker then tries to offline brute force the password >> since it usually use `RC4` for **ticket encryption**
+    - If the attacker finds the matching hash >> it means that it finds the password of `service account`
+
+- Detecting Kerberoasting With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="sharphound" sourcetype="bro:kerberos:json"
+            request_type=TGS cipher="rc4-hmac"
+            forwardable="true" renewable="true"
+            | table _time, id.orig_h, id.resp_h, request_type, cipher, forwardable, renewable, client, service
+        ```
+        - `cipher="rc4-hmac` >> it's key point here
+        - also request type >>
+        - `forwardable` >> permet to forwared the `TGS` to other machine or service
+        - `renewable` >> Permet au ticket d’être renouvelé sans redemander un mot de passe.
+        **Dans Kerberoasting, ces deux attributs sont souvent activés**
+
+- Practical Challenge:
+    1. What port does the attacker use for communication during the Kerberoasting attack?
+
+    **Resolu:**
+    - J'ai utilise la commande ci-dessus mais j'ai ajoute aussi cette partie: `id.resp_p` et `id.orig_p`
+    - Voila, j'ai trouve le port necessaire!
+
 #
-
-
-
-
-
 
 
 
