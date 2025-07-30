@@ -265,13 +265,50 @@
     - Apres, j'ai ajoute `id.orig_h` et `id.resp_h` pour montrer les resultats
     - Et voila, ca y est, c'est fini!
 
+# Detecting Zerologon
+- Goal:
+    - This attack is related to the vulnerability of `Netlogon Remote Protocol`
+    - More it's cryptographically related issue
+    - Vulnerability enables that **attacker can impersonate any user even DC, and execute remote procedure calls on their behalf**
+
+- Vulnerability in `Netlogon Remote Protocol`
+    - This protocol is used **authenticates users and machines in a Windows domain**
+    - When a user  wants to `authenticate against the domain controller`, it uses a protocol called `MS-NRPC`, a `part of Netlogon`
+    - They establish secure channel
+        - *The client and the server generate a session key, which is computed from the machine account's password.*
+        - *This key is then used to derive an initialization vector (IV) for the AES-CFB8 encryption mode*
+        - *Ideally, the IV should be unique and random for each encryption operation*
+        - **However, due to the flawed implementation in the Netlogon protocol, the IV is set to a fixed value of all zeros.**
+
+    **Surprise:**
+    - The attacker can exploit this flaw by authenticate against the DC using of **session key consisting of all zeros**
+    - Now, attacker authenticates itself without knowing machine account's password
+
+    - Later attacker uses `NetrServerPasswordSet2` function to **change the computer account's password to any value**
+    - **This gives the attacker full control over the DC**
+
+- Detecting Zerologon With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="zerologon" endpoint="netlogon" sourcetype="bro:dce_rpc:json"
+            | bin _time span=1m
+            | where operation == "NetrServerReqChallenge" OR operation == "NetrServerAuthenticate3" OR operation == "NetrServerPasswordSet2"
+            | stats count values(operation) as operation_values dc(operation) as unique_operations by _time, id.orig_h, id.resp_h
+            | where unique_operations >= 2 AND count>100
+        ```
+
+    - Keep an eye on key operations:
+        - `NetrServerReqChallenge`, `NetrServerAuthenticate3`, `NetrServerPasswordSet2`
+        - This is the flaw of connections when **domain-joined user tries to do Zerologon attack to DC**
+
+- Practical Challenge:
+    1. In a Zerologon attack, the primary port of communication for the attacker is port 88. Answer format: True, False.
+
+    **Resolu:**
+    - J'ai utilise `id.orig_p` et `id.resp_p` pour voir les port
+    - Et j'ai compris que No, l'attaquant n'ai utilise le port `88`
+
 #
-
-
-
-
-
-
 
 
 
