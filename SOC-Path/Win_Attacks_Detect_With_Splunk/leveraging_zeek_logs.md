@@ -308,11 +308,45 @@
     - J'ai utilise `id.orig_p` et `id.resp_p` pour voir les port
     - Et j'ai compris que No, l'attaquant n'ai utilise le port `88`
 
+# Detecting Exfiltration (HTTP)
+- Goal:
+    - Main method through `HTTP POST`
+    - *POST requests are commonly used for legitimate purposes, such as form submissions and file uploads,*
+    - *send it as the body of an HTTP POST request to C2*
+
+- Detection:
+    - Analyse data traffic to each specific IP addresses
+    - Flag any unusual more data usage
+
+- Detecting HTTP Exfiltration With Splunk & Zeek Logs:
+    - Command:
+        ```code
+            index="cobaltstrike_exfiltration_http" sourcetype="bro:http:json" method=POST
+            | stats sum(request_body_len) as TotalBytes by src, dest, dest_port
+            | eval TotalBytes = TotalBytes/1024/1024
+        ```
+        - Here, HTTP's method >> POST is selected
+        - Calculating the sum of `request_body_len` to find **total bytes** for each pair of source & destination IP pairs
+        - Convert `bytes to MB`
+
+- Practical Challenge:
+    1. Use the "cobaltstrike_exfiltration_https" index and the "bro:conn:json" sourcetype.
+    Create a Splunk search to identify exfiltration through HTTPS. Enter the identified destination IP as your answer.
+
+    **Resolu:**
+    - J'ai cree cette commande:
+        ```code
+            index="cobaltstrike_exfiltration_https" sourcetype="bro:conn:json"
+            | bin _time span=10m
+            | stats sum(orig_bytes) as sent_bytes by id.orig_h, id.resp_h
+            | eval sent_bytes = sent_bytes/1024/1024
+        ```
+        - J'ai cree une fenetre de 10 minutes
+        - J'ai fait la calculation pour `sum_bytes` pour chaque groupe `source & dest IPs`
+        - J'ai fait finalement la convertion
+        - Voila, ca y est, c'est fini!
+
 #
-
-
-
-
 
 
 
