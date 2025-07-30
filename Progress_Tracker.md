@@ -83,6 +83,9 @@
     #13 >> Intro to Digital Forensics: Done on 22/07/2025
          https://academy.hackthebox.com/achievement/897337/237
 
+    #14 >> Detecting Windows Attacks With Splunk: Done on 20/07/2025
+         https://academy.hackthebox.com/achievement/897337/233
+
 
 
 
