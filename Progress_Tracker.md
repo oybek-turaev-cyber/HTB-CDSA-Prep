@@ -42,7 +42,7 @@
     # 8 >> Intro to Assembly: Done on 14/05/2025
          https://academy.hackthebox.com/achievement/897337/85
 
-**SOC Analyst** >>
+**SOC Analyst** >> Mission Completed on 30/07/2025
 
     #1 >> Incident Handling: Done on 16/05/2025
          https://academy.hackthebox.com/achievement/897337/148
