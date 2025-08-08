@@ -1,5 +1,5 @@
 # BOTS Splunk
-## APT Hunting #1
+## APT Hunting #1 - Initial Access
 - Victim Info:
     - Frothly >> Beer Company >> USA
     - Notification from Law Enforcement FBI
