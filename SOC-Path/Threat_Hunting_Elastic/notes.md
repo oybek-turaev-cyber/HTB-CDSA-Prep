@@ -1,4 +1,5 @@
 # Threat Hunting
+- Start
     - active / human-led / often hypothesis-driven practice
     - identify the critical assets
     - analyze TTPs >> tactics >> techniques >> procedures
@@ -6,46 +7,46 @@
     - cognitive empathy with the attacker
     - offensive & proactive strategy
 
-**When You should HUNT?**
+- **When You should HUNT?**
     - `When New Information on an Adversary or Vulnerability Comes to Light`
     - When New Indicators are Associated with a Known Adversary
     - When Multiple Network Anomalies are Detected
     - `During an Incident Response Activity`
 
 # Hunting Process:
-    1. `Setting the Stage:`
+1. `Setting the Stage:`
         - planning / prep / threat landscape / business assets
-    2. `Formulating Hypotheses:`
+2. `Formulating Hypotheses:`
         - making educated predictions through:
             - recent threat intelligence
             - industry updates
             - alerts from security tools
             - or even our professional intuition
-    3. `Designing the Hunt:`
+3. `Designing the Hunt:`
         - follow the hypothesis
         - recognize the specific data sources
         - look for the indicators of compromise (IoCs) or patterns
-    4. `Data Gathering and Examination:`
+4. `Data Gathering and Examination:`
         -  active threat hunt occurs
         -  collecting necessary data >> log files >> network traffic data >> endpoint data
-    5. `Evaluating Findings and Testing Hypotheses:`
+5. `Evaluating Findings and Testing Hypotheses:`
         - Need to interpret the results.
         - Identify affected systems
-    6. `Mitigating Threats:`
+6. `Mitigating Threats:`
         - Isolate affected systems
         - Eliminate malware
         - Patch vulnerabilities
         - Modify configurations
-    7. `After the Hunt:`
+7. `After the Hunt:`
         - Document findings
         - Share with stakeholders
 
 # Glossary Hunting:
-    - `Tactics` >> explain "why"
+- `Tactics` >> explain "why"
     - `Techniques` >> explain "how"
     - `Procedures` >> explain "recipe"
 
-    **Pyramid of Pain:**
+- **Pyramid of Pain:**
     - presents a hierarchy of indicators
     - helps to detect `adversaries`
     - the impact is for the `adversaries`
@@ -56,10 +57,10 @@
                     - `Domain Names`           >> Simple
                     - `IP Addresses`           >> Easy
                     - `Hash Values`            >> Trivial
-    - **Domain Names:**
+- **Domain Names:**
         - `domain generation algorithms (DGAs)`: to produce a large number of `pseudo-random domain names` to **evade detection**.
 
-    **Diamond Model:**
+- **Diamond Model:**
     -  a more structured approach to `understand`, `analyze` and respond to cyber threats.
     -  Adversary >> Capability >> Infrastructure >> Victim
     - *Infrastructure vs Capability*
@@ -69,11 +70,12 @@
             - other network resources used to **deliver malware, control compromised systems, or exfiltrate data**
 
 
+- Voila:
     **The Diamond Model provides a complementary perspective to the Cyber Kill Chain, offering a
     different lens through which to understand and respond to cyber threats.**
 
 # Cyber Threat Intelligence >> CTI
-    - `Key Points` >> Relevance >> Timeliness >> Actionability >>> Accuracy
+- `Key Points` >> Relevance >> Timeliness >> Actionability >>> Accuracy
     - **Threat Intelligence vs Threat Hunting**
         - **Predictive vs (Reactive & Proactive)**
 
@@ -89,16 +91,16 @@
     - Proactive Threat Hunting                                  >> hunt before the adversary?
 
 # Practical Challenge: Stuxbot
-    - **Report is given:**
+- **Report is given:**
         - Possible Victim Platforms >> Microsoft Windows
         - Users                     >> Windows Users
         - Potential Impact          >> Complete takeover victim's machine
         - Risk Level                >> Critical
 
-    - **Attack Scenario:**
+- **Attack Scenario:**
         - Phishing Email >> OneNote File >> Batch File >> Powershell script (in memory) >> RAT
 
-    - **IOCs:**
+- **IOCs:**
         - OneNote File: `https://transfer.sh/get/kNxU7/invoice.one` or
             `https://mega.io/dl9o1Dz/invoice.one`
         - Powershell Script: `https://pastebin.com/raw/AvHtdKb2` or `https://pastebin.com/raw/gj58DKz`
@@ -107,7 +109,7 @@
             - `226A723FFB4A91D9950A8B266167C5B354AB0DB1DC225578494917FE53867EF2`
             - `018D37CBD3878258C29DB3BC3F2988B6AE688843801B9ABC28E6151141AB66D4`
 
-    - **Hunting For Stuxbot With The Elastic Stack:**
+- **Hunting For Stuxbot With The Elastic Stack:**
         - Available Data:
             1. `windows*` >> includes powershell logs >> Sysmon logs >> Windows audit logs
             2. `zeek*` >> includes >> zeek logs >>  a network security monitoring tool
@@ -161,7 +163,7 @@
 # Skills Assessment: Challenges >> Hunting For Stuxbot (Round 2)
 
 ## The Tasks:
-        1. Create a KQL query to hunt for "Lateral Tool Transfer" to C:\Users\Public. Enter the content of the user.name field in the document that is rel           ated to a transferred tool that starts with "r" as your answer.
+1. Create a KQL query to hunt for "Lateral Tool Transfer" to C:\Users\Public. Enter the content of the user.name field in the document that is rel           ated to a transferred tool that starts with "r" as your answer.
         .
         **Solved:**
         - I identified that for the lateral movement process >> sysmon file create 11 ID may be
@@ -171,7 +173,7 @@
         - Voila >> J'ai fini la tache avec succes
         -
         -
-        2.  Create a KQL query to hunt for "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder". Enter the content of the registry.valu            e field in the document that is related to the first registry-based persistence action as your answer.
+2.  Create a KQL query to hunt for "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder". Enter the content of the registry.valu            e field in the document that is related to the first registry-based persistence action as your answer.
         .
         **Solved:**
         - This went challenging for me
@@ -184,7 +186,7 @@
         - Voila, c'est fini, j'ai trouve le drapeau
         -
         -
-        3.  Create a KQL query to hunt for "PowerShell Remoting for Lateral Movement". Enter the
+3.  Create a KQL query to hunt for "PowerShell Remoting for Lateral Movement". Enter the
             content of the winlog.user.name field in the document that is related to PowerShell
             remoting-based lateral movement towards DC1.
         .
