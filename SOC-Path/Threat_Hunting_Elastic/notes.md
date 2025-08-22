@@ -82,7 +82,7 @@
     - *Intelligence Types:*
         - Strategic >> Operational >> Tactical
 
-**How To Go Through A Tactical Threat Intelligence Report?:**
+- **How To Go Through A Tactical Threat Intelligence Report?:**
     - `Comprehending the Report's Scope and Narrative`            >> specifically to whom all this info?
     - Spotting and Classifying the IOCs                         >> what IoCs they have ?
     - `Comprehending the Attack's Lifecycle`                      >> how the attack functions?
@@ -110,11 +110,11 @@
             - `018D37CBD3878258C29DB3BC3F2988B6AE688843801B9ABC28E6151141AB66D4`
 
 - **Hunting For Stuxbot With The Elastic Stack:**
-        - Available Data:
+    - Available Data:
             1. `windows*` >> includes powershell logs >> Sysmon logs >> Windows audit logs
             2. `zeek*` >> includes >> zeek logs >>  a network security monitoring tool
-        -
-        - Hunting:
+
+    - Hunting:
             1. Sysmon ID 15 >> (FileCreateStreamHash) >>  a browser file download event: `event.code:15`
             2. Search filename: `file.name:*invoice.one`
             3. Sysmon ID 11 >> (File Create) (browsers aren't involved in the file download process): `event.code:11`
