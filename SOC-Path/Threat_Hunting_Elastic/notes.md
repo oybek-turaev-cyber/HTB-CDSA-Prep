@@ -119,23 +119,23 @@
             2. Search filename: `file.name:*invoice.one`
             3. Sysmon ID 11 >> (File Create) (browsers aren't involved in the file download process): `event.code:11`
             4. `file.name:invoice.one*`
-            - Through this, we found the `file downloaded actions` & associated Host : now we analyse which host did
-                this to get its IP address:
-                - KQL >> `event.code:3 AND host.hostname:WS001` >> for this switch logs `zeek*`
-                - IP is found: Now need to check DNS queries:
-                    - `source.ip:192.168.28.130 AND dns.question.name:*`
-                    - `March 26th 2023 @ 22:05:00 to March 26th 2023 @ 22:05:48.`
-                    - We found some artifacts mentioned in the report: IP address of C2 possible,
+    - Through this, we found the `file downloaded actions` & associated Host : now we analyse which host did
+        this to get its IP address:
+        - KQL >> `event.code:3 AND host.hostname:WS001` >> for this switch logs `zeek*`
+        - IP is found: Now need to check DNS queries:
+        - `source.ip:192.168.28.130 AND dns.question.name:*`
+        - `March 26th 2023 @ 22:05:00 to March 26th 2023 @ 22:05:48.`
+        - We found some artifacts mentioned in the report: IP address of C2 possible,
                         dig deeper:
-                    - `34.197.10.85, 3.213.216.16`
-                    - We found that `Bob`, successfully downloaded the file "invoice.one" from the hosting provider "file.io".
-                    - `event.code:1 AND process.command_line:*invoice.one*`
-                    - `process.pid:"9944" and process.name:"powershell.exe"`
-                    -
-                    - `process.hash.sha256` field for default.exe
-                    - `process.hash.sha256:018d37cbd3878258c29db3bc3f2988b6ae688843801b9abc28e6151141ab66d4`
-                    - Exact Match is found
-                    - `(event.code:4624 OR event.code:4625) AND winlog.event_data.LogonType:3 AND source.ip:192.168.28.130`
+        - `34.197.10.85, 3.213.216.16`
+        - We found that `Bob`, successfully downloaded the file "invoice.one" from the hosting provider "file.io".
+        - `event.code:1 AND process.command_line:*invoice.one*`
+        - `process.pid:"9944" and process.name:"powershell.exe"`
+        -
+        - `process.hash.sha256` field for default.exe
+        - `process.hash.sha256:018d37cbd3878258c29db3bc3f2988b6ae688843801b9abc28e6151141ab66d4`
+        - Exact Match is found
+        - `(event.code:4624 OR event.code:4625) AND winlog.event_data.LogonType:3 AND source.ip:192.168.28.130`
 
 ## Practical Challenges:
     1. Navigate to http://[Target IP]:5601 and follow along as we hunt for Stuxbot. In the part where default.exe is under investigation, a VBS file is mentioned. Enter its full name as your answer, including the extension.
