@@ -1,10 +1,9 @@
 # Splunk
-- Start:
-    - versatile, scalable data analytics software tool
-    - ingest / index / analyze / visualize
+- versatile, scalable data analytics software tool
+- ingest / index / analyze / visualize
 
-    - **Splunk Architecture:**
-        - `Forwarders:` >> responsible for data collection / forward to data indexers
+- **Splunk Architecture:**
+    - `Forwarders:` >> responsible for data collection / forward to data indexers
             - `Universal Forwarders:` >> lightweight agent without any preprocessing
             - `Heavy Forwarders:` >> agents with parsing data before forwarding
         -
@@ -23,11 +22,11 @@
 
 ## Splunk as SIEM
 - **Basic Searching:**
-        - `search index="main" "UNKNOWN"`
-        - `index="main" EventCode!=8`
+    - `search index="main" "UNKNOWN"`
+    - `index="main" EventCode!=8`
 
 - **Commands:**
-        - `Comparison:` >> `=, !=, <, >, <=, >=`
+    - `Comparison:` >> `=, !=, <, >, <=, >=`
         -
         - **fields** >> to exclude or include certain fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | fields - User`
         - **table**  >> to show in tabular format >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | table _time, host, Image`
@@ -58,7 +57,7 @@
         -  `maxspan=1m` clause limits the transaction to events occurring within a 1-minute window.
         -
         **Subsearches:**
-            -  a search that is nested inside another search
+        -  a search that is nested inside another search
             -  `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 NOT [ search index="main" sourcetype="WinEventLog:Sysmon" EventCode=1
                | top limit=100 Image | fields Image ] | table _time, Image, CommandLine, User, ComputerName`
             - NOT []: The square brackets contain the subsearch.
@@ -267,11 +266,11 @@
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR Image=*\\whoami.exe OR Image=*\\netstat.e           xe OR Image=*\\nbtstat.exe OR Image=*\\hostname.exe OR Image=*\\tasklist.exe | stats count by Image,CommandLine | sort - count`
 
 - **Detection Of Requesting Malicious Payloads/Tools Hosted On Reputable/Whitelisted Domains (Such As githubusercontent.com)**
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=22  QueryName="*github*" | stats count by Image, QueryName`
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=22  QueryName="*github*" | stats count by Image, QueryName`
             - Sysmon ID 22 >> DNS Queries
 
 - **Detection Of PsExec Usage:**
-        - `PsExec` >> is a tool to manage remote Windows systems via command-line
+    - `PsExec` >> is a tool to manage remote Windows systems via command-line
             - It's available to members of a computer’s Local Administrator group.
             - It works by `copying a service executable` to the `hidden Admin$ share`.
             - It taps into the Windows Service Control Manager API to jump-start the service.
@@ -279,40 +278,40 @@
             - PsExec can be deployed on both local and remote machines
             - It can enable a user to act under the **NT AUTHORITY\SYSTEM account**.
             -
-        - `Case #1:` >> **Leveraging Sysmon Event ID 13 (RegistryEvent):**
+    - `Case #1:` >> **Leveraging Sysmon Event ID 13 (RegistryEvent):**
             - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=13 Image="C:\\Windows\\system32\\services.exe"
               TargetObject="HKLM\\System\\CurrentCo ntrolSet\\Services\\*\\ImagePath" | rex field=Details "(?<reg_file_name>[^\\\]+)$"
               | eval reg_file_name = lower(reg_file_name), file_name = if(isnull(file_name),reg_file_name,lower(file_name))
               | stats values(Image) AS Image, values(Details) AS RegistryDetails, values(_time) AS EventTimes, count by file_name, ComputerName`
-            - **this query is looking for instances where the services.exe process has modified the ImagePath value of any service.**
+        - **this query is looking for instances where the services.exe process has modified the ImagePath value of any service.**
             -
         - `Case #2:` >> **Leveraging Sysmon Event ID 11 (FileCreate):**
             - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image=System | stats count by TargetFilename`
             -
-        - `Case #3:` >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System | stats count by PipeName`
+    - `Case #3:` >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System | stats count by PipeName`
 
 - **Detection Of Utilizing Archive Files For Transferring Tools Or Data Exfiltration:**
-        - `index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
+    - `index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
           | stats count by ComputerName, User, TargetFilename | sort - count`
 
 - **Detection Of Utilizing PowerShell or MS Edge For Downloading Payloads/Tools:**
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" |  stats count by Image, TargetFilename |  sort + count`
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" |  stats count by Image, TargetFilename |  sort + count`
         -
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
            |  stats count by TargetFilename |  sort + count`
-        - ***Zone.Identifier is indicative of a file downloaded from the internet or another potentially untrustworthy source***
+    - ***Zone.Identifier is indicative of a file downloaded from the internet or another potentially untrustworthy source***
 
 - **Detection Of Execution From Atypical Or Suspicious Locations:**
-        - any process creation (EventCode=1) occurring in a `user's Downloads folder`.
-        - `index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" |  stats count by Image`
+    - any process creation (EventCode=1) occurring in a `user's Downloads folder`.
+    - `index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" |  stats count by Image`
 
 - **Detection Of Executables or DLLs Being Created Outside The Windows Directory:**
-        - `index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
+    - `index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
           | stats count by User, TargetFilename | sort + count`
 
 - **Detection Of Misspelling Legitimate Binaries:**
-        - misspellings of the legitimate PSEXESVC.exe binary, commonly used by PsExec.
+    - misspellings of the legitimate PSEXESVC.exe binary, commonly used by PsExec.
         - By examining the Image, ParentImage, CommandLine and ParentCommandLine fields, the search aims to identify instances where variations of psexe a          re used
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (CommandLine="*psexe*.exe"
           NOT (CommandLine="*PSEXESVC.exe" OR CommandLine="*PsExec64.exe")) OR (ParentCommandLine="*psexe*.exe"
@@ -358,19 +357,19 @@
 
 ## Crafting SPL Searches Based On Analytics
 - **Detection Of Abnormally Long Commands:**
-        - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
+    - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
         - We apply some improvements:
         - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe ParentImage!="*msiexec.exe" ParentImage!="*explorer.exe"
           | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
 
 - **Detection Of Abnormal cmd.exe Activity:**
-        - calculates the count, average, and standard deviation of cmd.exe executions, and flags outliers.
+    - calculates the count, average, and standard deviation of cmd.exe executions, and flags outliers.
         - `index="main" EventCode=1 (CommandLine="*cmd.exe*") | bucket _time span=1h | stats count as cmdCount by _time User CommandLine
           | eventstats avg(cmdCount) as avg stdev(cmdCount) as stdev
           | eval isOutlier=if(cmdCount > avg+1.5*stdev, 1, 0) | search isOutlier=1`
 
 - **Detection Of Processes Loading A High Number Of DLLs In A Specific Time:**
-        - It is not uncommon for malware to load multiple DLLs in rapid succession
+    - It is not uncommon for malware to load multiple DLLs in rapid succession
         - Time Window is 1 hour
         - `index="main" EventCode=7 | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image
           | where unique_dlls_loaded > 3 | stats count by Image, unique_dlls_loaded`
@@ -382,7 +381,7 @@
           | stats count by Image, unique_dlls_loaded | sort - unique_dlls_loaded`
 
 - **Detection Of Transactions Where The Same Process Has Been Created More Than Once On The Same Computer:**
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
+    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
           | stats count by Image, ParentImage`
         - `transaction` >> used to group related events together based on shared field values
         - events are being `grouped together` if they share the **same** `ComputerName` and `Image` values.
