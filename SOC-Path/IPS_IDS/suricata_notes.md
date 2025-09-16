@@ -357,7 +357,7 @@
     - `ja3 -a --json /home/htb-student/pcaps/sliverenc.pcap`
 
 ## Practical Challenges:
-    1.  There is a file named trickbot.pcap in the /home/htb-student/pcaps directory,
+1.  There is a file named trickbot.pcap in the /home/htb-student/pcaps directory,
         which contains network traffic related to a certain variation of the Trickbot malware.
         Enter the precise string that should be specified in the content keyword of the rule
         with sid 100299 within the local.rules file so that an alert is triggered as your answer.
