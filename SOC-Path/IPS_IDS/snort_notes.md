@@ -137,7 +137,7 @@
       for the `"common name"` field in an `X.509 certificate`
 
 ## Practical Challenges:
-     1.  There is a file named log4shell.pcap in the /home/htb-student/pcaps directory,
+1.  There is a file named log4shell.pcap in the /home/htb-student/pcaps directory,
          which contains network traffic related to log4shell exploitation attempts,
         where the payload is embedded within the user agent.
         Enter the keyword that should be specified right before the content keyword
