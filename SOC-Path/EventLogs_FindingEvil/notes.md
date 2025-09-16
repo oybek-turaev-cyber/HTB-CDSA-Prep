@@ -195,28 +195,28 @@
     - Voila c'est comment j'ai trouve la reponse!
 
 # Get-WinEvent
-    - an ideal tool >> to work with massive amount of logs
+- an ideal tool >> to work with massive amount of logs
 
-    - `Get-WinEvent -ListLog * | Select-Object LogName, RecordCount, IsClassicLog, IsEnabled, LogMode, LogType | Format-Table -AutoSize`
+- `Get-WinEvent -ListLog * | Select-Object LogName, RecordCount, IsClassicLog, IsEnabled, LogMode, LogType | Format-Table -AutoSize`
         - `-ListLog` >> shows all available logs
 
-    - `Get-WinEvent -ListProvider * | Format-Table -AutoSize`
+- `Get-WinEvent -ListProvider * | Format-Table -AutoSize`
         - >> shows log providers
 
-    - `Get-WinEvent -LogName 'System' -MaxEvents 50 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message | Format-Table -AutoSize`
+- `Get-WinEvent -LogName 'System' -MaxEvents 50 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message | Format-Table -AutoSize`
         - >> Retrieving events from the System log
 
-    - `Get-WinEvent -LogName 'Microsoft-Windows-WinRM/Operational' -MaxEvents 30 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message        | Format-Table -AutoSize`
+- `Get-WinEvent -LogName 'Microsoft-Windows-WinRM/Operational' -MaxEvents 30 | Select-Object TimeCreated, ID, ProviderName, LevelDisplayName, Message        | Format-Table -AutoSize`
         - >> now logs from Microsoft-Windows-WinRM/Operational
 
-    - `Get-WinEvent -Path 'C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\exec_sysmon_1_lolbin_pcalua.evtx' -MaxEvents 5 | Select-Object >>> specify he`
+- `Get-WinEvent -Path 'C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\exec_sysmon_1_lolbin_pcalua.evtx' -MaxEvents 5 | Select-Object >>> specify he`
         - >> from the files `.evtx`
 
-    - `Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; ID=1,3} | Select-Object TimeCreated, ID, ProviderName, LevelDisplay       Name, Message | Format-Table -AutoSize`
+- `Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; ID=1,3} | Select-Object TimeCreated, ID, ProviderName, LevelDisplay       Name, Message | Format-Table -AutoSize`
         - >> now with **-FilterHashtable**
         - **Sysmon ID 1 and 3** >> for *dangerous or uncommon binaries* or C2 communication possible
         -
-        - `Get-WinEvent -FilterHashtable @{Path='C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\sysmon_mshta_sharpshooter_stageless_meterpreter.evtx'; ID           =1,3} |`
+- `Get-WinEvent -FilterHashtable @{Path='C:\Tools\chainsaw\EVTX-ATTACK-SAMPLES\Execution\sysmon_mshta_sharpshooter_stageless_meterpreter.evtx'; ID           =1,3} |`
             - This is for exported files
 
 ## If we want the get event logs based on a date range (5/28/23 - 6/2/2023)
