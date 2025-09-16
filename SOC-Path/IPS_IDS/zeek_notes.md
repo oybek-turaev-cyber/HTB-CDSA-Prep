@@ -80,7 +80,7 @@
     -
 
 ## Practical Challenges:
-    1. There is a file named printnightmare.pcap in the /home/htb-student/pcaps directory, which contains network traffic related
+1. There is a file named printnightmare.pcap in the /home/htb-student/pcaps directory, which contains network traffic related
        to the PrintNightmare (https://labs.jumpsec.com/printnightmare-network-analysis/) vulnerability.
        Enter the zeek log that can help us identify the suspicious spooler functions as your answer
 
@@ -89,7 +89,7 @@
     - Apres, j'ai cherche les informations pour trouver `spooler` et voila
     - J'ai obtenu le drapeau
 
-    2. There is a file named revilkaseya.pcap in the /home/htb-student/pcaps directory, which contains network traffic related
+2. There is a file named revilkaseya.pcap in the /home/htb-student/pcaps directory, which contains network traffic related
        to the REvil ransomware Kaseya supply chain attack.
        Enter the total number of bytes that the victim has transmitted to the IP address 178.23.155.240 as your answer.
 
