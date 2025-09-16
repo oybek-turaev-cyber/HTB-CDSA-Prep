@@ -274,7 +274,7 @@
       rev:1;)`
 
 ## Practical Challenge:
-    1. In the /home/htb-student directory of this section's target, there is a file called local.rules.
+1. In the /home/htb-student directory of this section's target, there is a file called local.rules.
        Within this file, there is a rule with sid 2024217, which is associated with the MS17-010 exploit.
        Additionally, there is a PCAP file named eternalblue.pcap in the /home/htb-student/pcaps directory,
        which contains network traffic related to MS17-010. What is the minimum offset value that can be set to trigger an alert?
