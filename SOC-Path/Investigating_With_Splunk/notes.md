@@ -1,4 +1,5 @@
 # Splunk
+- Start:
     - versatile, scalable data analytics software tool
     - ingest / index / analyze / visualize
 
@@ -21,11 +22,11 @@
         - `Knowledge Objects` >> include fields, tags, event types, lookups, macros, data models, and alerts that enhance the data in Splunk
 
 ## Splunk as SIEM
-    - **Basic Searching:**
+- **Basic Searching:**
         - `search index="main" "UNKNOWN"`
         - `index="main" EventCode!=8`
 
-    - **Commands:**
+- **Commands:**
         - `Comparison:` >> `=, !=, <, >, <=, >=`
         -
         - **fields** >> to exclude or include certain fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | fields - User`
@@ -63,6 +64,7 @@
             - NOT []: The square brackets contain the subsearch.
 
 ## How to Identify Available Data
+- Commands:
     - **eventcount** >> `| eventcount summarize=false index=* | table index`
     - **metadata** >> `| metadata type=sourcetypes` >> `| metadata type=sourcetypes index=* | table sourcetype`
                  `| metadata type=sources index=* | table source`
@@ -81,18 +83,18 @@
     -
 
 ## Helpful:
-    - **Pivots:** >> Pivots are an extremely powerful feature in Splunk that allows us to create complex reports and visualizations
+- **Pivots:** >> Pivots are an extremely powerful feature in Splunk that allows us to create complex reports and visualizations
       without writing SPL queries.
 
 ## Practical Exercises:
-    1. Find through an SPL search against all data the account name with the highest amount of Kerberos authentication ticket requests. Enter it as your answer.
+1. Find through an SPL search against all data the account name with the highest amount of Kerberos authentication ticket requests. Enter it as your answer.
 
     **Solved:**
     - I found the Event IDs associated with Kerberos Authentication: Event ID >> 4768, 4773
     - SPL >> `index="main" EventCode=4768 | table Account_Name, User`
     - Voila >> this query gives the correct results!
 
-    2. Find through an SPL search against all 4624 events the count of distinct computers accessed by the account name SYSTEM. Enter it as your answer.
+2. Find through an SPL search against all 4624 events the count of distinct computers accessed by the account name SYSTEM. Enter it as your answer.
 
     **Solved:**
     - I used the hint given by offering "distinct_count" function
@@ -100,7 +102,7 @@
     - SPL >> `index="main" EventCode=4624 Account_Name="SYSTEM" | dc(ComputerName)`
     - Voila >> j'ai trouve le drapeau
 
-    3. Find through an SPL search against all 4624 events the account name that made the most login attempts within a span of 10 minutes. Enter it as your answer.
+3. Find through an SPL search against all 4624 events the account name that made the most login attempts within a span of 10 minutes. Enter it as your answer.
 
     **Solved:**
     - It went a bit challenging since the question meant different meaning:
@@ -116,12 +118,12 @@
     - Voici, I got the flag!
 
 # Splunk Apps
-    - Different Apps to be integrated into Splunk SIEM
+- Different Apps to be integrated into Splunk SIEM
 
-    - **Sysmon App** by Mike Haag
+- **Sysmon App** by Mike Haag
 
 ## Practical Challenges:
-    1. Access the Sysmon App for Splunk and go to the "Reports" tab. Fix the search associated with the "Net - net view" report and provide the complete e       xecuted command as your answer.
+1. Access the Sysmon App for Splunk and go to the "Reports" tab. Fix the search associated with the "Net - net view" report and provide the complete e       xecuted command as your answer.
 
     **Solved:**
     - I see that the SPL Query is not well-built:
@@ -129,7 +131,7 @@
     - I fixed in a such way: `index="main" sourcetype="WinEventLog:Sysmon EventCode=1 | table ComputerName, CommandLine`
     - Voila, c'est fini!
 
-    2. Access the Sysmon App for Splunk, go to the "Network Activity" tab, and choose "Network Connections". Fix the search and provide the number of conn       ections that SharpHound.exe has initiated as your answer.
+2. Access the Sysmon App for Splunk, go to the "Network Activity" tab, and choose "Network Connections". Fix the search and provide the number of conn       ections that SharpHound.exe has initiated as your answer.
 
     **Solved:**
     - My fixed SPL Query:
@@ -141,13 +143,13 @@
     - Voila, c'est fini!
 
 # Intrusion Detection With Splunk (Real-World Scenario)
-    - ` I will be working with over 500,000 events.`
+- ` I will be working with over 500,000 events.`
     - Need to know what we have                  >> `index="main" | stats count by sourcetype`
     - Then I will choose the specific sourcetype >> `index="main" sourcetype="WinEventLog:Sysmon"`
     - Then do some general queries to warm-up hands
 
 ## Embrac ing The Mindset Of Analysts, Threat Hunters, & Detection Engineers
-    - Start with what Sysmon EventCodes are on the trend >> `index="main" sourcetype="WinEventLog:Sysmon" | stats count by EventCode`
+- Start with what Sysmon EventCodes are on the trend >> `index="main" sourcetype="WinEventLog:Sysmon" | stats count by EventCode`
     - I decide to detect on suspicious \ unusual **parent-child** processes >> using Sysmon ID 1 (ProcessCreate)
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | stats count by ParentImage, Image`
     - Then to be more specific with `cmd.exe` or `powershell.exe`:
@@ -183,7 +185,7 @@
         -
 
 ## Creating Meaningful Alerts
-    - It's important now to create a useful alerts
+- It's important now to create a useful alerts
         - `index="main" CallTrace="*UNKNOWN*" | stats count by EventCode` >> Sysmon ID 10
         - `index="main" CallTrace="*UNKNOWN*" | stats count by SourceImage`
         - **false positives we mentioned, and they're all JITs as well! .Net is a JIT, and Squirrel
@@ -202,7 +204,7 @@
 
 
 ## Practical Challenges:
-    1. Find through an SPL search against all data the other process that dumped lsass. Enter its name as your answer.
+1. Find through an SPL search against all data the other process that dumped lsass. Enter its name as your answer.
 
     **Solved:**
     - I see that the investigation is associated with access to lsass
@@ -210,7 +212,7 @@
     - My SPL >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=10 lsass | stats count by Image | sort - count`
     - Voila >> it gives the correct direction
 
-    2. Find through SPL searches against all data the method through which the other process dumped lsass. Enter the misused DLL's name as your answer.
+2. Find through SPL searches against all data the method through which the other process dumped lsass. Enter the misused DLL's name as your answer.
 
     **Solved:**
     - Based on the investigation from `powershell.exe` associated unusual activities
@@ -221,7 +223,7 @@
     - Voila >> it gives the correct direction
 
 
-    3. Find through an SPL search against all data any suspicious loads of clr.dll that could indicate a C# injection/execute-assembly attack. Then, again       through SPL searches, find if any of the suspicious processes that were returned in the first place were used to temporarily execute code. Enter it       s name as your answer.
+3. Find through an SPL search against all data any suspicious loads of clr.dll that could indicate a C# injection/execute-assembly attack. Then, again       through SPL searches, find if any of the suspicious processes that were returned in the first place were used to temporarily execute code. Enter it       s name as your answer.
 
     **Solved:**
     - To understand the scenario >> I created a map of the attack >> that any usage of clr.dll
@@ -234,7 +236,7 @@
         execute the code
     - Voila >> c'est fini
 
-    4. Find through SPL searches against all data the two IP addresses of the C2 callback server. Answer format: 10.0.0.1XX and 10.0.0.XX
+4. Find through SPL searches against all data the two IP addresses of the C2 callback server. Answer format: 10.0.0.1XX and 10.0.0.XX
 
     **Solved:**
     - Starting from the beginning I know that there is a suspicious IP address `10.0.0.229`
@@ -246,7 +248,7 @@
     - My SPL >> `index="main" sourcetype="WinEventLog:Sysmon" host="DESKTOP......$" | stats count by SourceIp, DestinationIp | sort - count`
     - Voila, J'ai trouve le drapeau!!!
 
-    5. Find through SPL searches against all data the port that one of the two C2 callback server IPs used to connect to one of the compromised machines.        Enter it as your answer.
+5. Find through SPL searches against all data the port that one of the two C2 callback server IPs used to connect to one of the compromised machines.        Enter it as your answer.
 
     **Solved:**
     - Continuing with #4 Challenge >> I just added to my query: Actually I found two mostly used
@@ -256,19 +258,19 @@
     - Voila, c'est fini!!!
 
 # Detecting Attacker Behavior With Splunk Based on TTPS
-    - Two Approaches:
-    1. **Spot the known**
-    2. **Spot the unusual**
+- Two Approaches:
+1. **Spot the known**
+2. **Spot the unusual**
 
 ## Crafting SPL Searches Based On Known TTPs
-    - **Detection Of Reconnaissance Activities Leveraging Native Windows Binaries:**
+- **Detection Of Reconnaissance Activities Leveraging Native Windows Binaries:**
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR Image=*\\whoami.exe OR Image=*\\netstat.e           xe OR Image=*\\nbtstat.exe OR Image=*\\hostname.exe OR Image=*\\tasklist.exe | stats count by Image,CommandLine | sort - count`
 
-    - **Detection Of Requesting Malicious Payloads/Tools Hosted On Reputable/Whitelisted Domains (Such As githubusercontent.com)**
+- **Detection Of Requesting Malicious Payloads/Tools Hosted On Reputable/Whitelisted Domains (Such As githubusercontent.com)**
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=22  QueryName="*github*" | stats count by Image, QueryName`
             - Sysmon ID 22 >> DNS Queries
 
-    - **Detection Of PsExec Usage:**
+- **Detection Of PsExec Usage:**
         - `PsExec` >> is a tool to manage remote Windows systems via command-line
             - It's available to members of a computer’s Local Administrator group.
             - It works by `copying a service executable` to the `hidden Admin$ share`.
@@ -290,26 +292,26 @@
         - `Case #3:` >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
             - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System | stats count by PipeName`
 
-    - **Detection Of Utilizing Archive Files For Transferring Tools Or Data Exfiltration:**
+- **Detection Of Utilizing Archive Files For Transferring Tools Or Data Exfiltration:**
         - `index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
           | stats count by ComputerName, User, TargetFilename | sort - count`
 
-    - **Detection Of Utilizing PowerShell or MS Edge For Downloading Payloads/Tools:**
+- **Detection Of Utilizing PowerShell or MS Edge For Downloading Payloads/Tools:**
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" |  stats count by Image, TargetFilename |  sort + count`
         -
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
            |  stats count by TargetFilename |  sort + count`
         - ***Zone.Identifier is indicative of a file downloaded from the internet or another potentially untrustworthy source***
 
-    - **Detection Of Execution From Atypical Or Suspicious Locations:**
+- **Detection Of Execution From Atypical Or Suspicious Locations:**
         - any process creation (EventCode=1) occurring in a `user's Downloads folder`.
         - `index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" |  stats count by Image`
 
-    - **Detection Of Executables or DLLs Being Created Outside The Windows Directory:**
+- **Detection Of Executables or DLLs Being Created Outside The Windows Directory:**
         - `index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
           | stats count by User, TargetFilename | sort + count`
 
-    - **Detection Of Misspelling Legitimate Binaries:**
+- **Detection Of Misspelling Legitimate Binaries:**
         - misspellings of the legitimate PSEXESVC.exe binary, commonly used by PsExec.
         - By examining the Image, ParentImage, CommandLine and ParentCommandLine fields, the search aims to identify instances where variations of psexe a          re used
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (CommandLine="*psexe*.exe"
@@ -319,13 +321,13 @@
           NOT (Image="*PSEXESVC.exe" OR Image="*PsExec64.exe"))
           |  table Image, CommandLine, ParentImage, ParentCommandLine`
         -
-    - **Detection Of Using Non-standard Ports For Communications/Transfers:**
+- **Detection Of Using Non-standard Ports For Communications/Transfers:**
         - the idea is to exclude the commonly used ports: 80,443,22,21
         - `index="main" EventCode=3 NOT (DestinationPort=80 OR DestinationPort=443 OR DestinationPort=22 OR DestinationPort=21)
           | stats count by SourceIp, DestinationIp, DestinationPort | sort - count`
         -
 ## Practical Challenges:
-    1.  Find through SPL searches against all data the password utilized during the PsExec activity
+1.  Find through SPL searches against all data the password utilized during the PsExec activity
 
     **Solved:**
     - I got the feeling that I need CommandLine field
@@ -335,7 +337,7 @@
 
 
 # Detecting Attacker Behavior With Splunk Based On Analytics
-    - Key Idea >> **By profiling normal behavior and identifying deviations from this baseline**
+- Key Idea >> **By profiling normal behavior and identifying deviations from this baseline**
 
     - `streamstats` command in Splunk
 
@@ -355,19 +357,19 @@
     - Then we see where the field=1 which is abnormality
 
 ## Crafting SPL Searches Based On Analytics
-    - **Detection Of Abnormally Long Commands:**
+- **Detection Of Abnormally Long Commands:**
         - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
         - We apply some improvements:
         - `index="main" sourcetype="WinEventLog:Sysmon" Image=*cmd.exe ParentImage!="*msiexec.exe" ParentImage!="*explorer.exe"
           | eval len=len(CommandLine) | table User, len, CommandLine | sort - len`
 
-    - **Detection Of Abnormal cmd.exe Activity:**
+- **Detection Of Abnormal cmd.exe Activity:**
         - calculates the count, average, and standard deviation of cmd.exe executions, and flags outliers.
         - `index="main" EventCode=1 (CommandLine="*cmd.exe*") | bucket _time span=1h | stats count as cmdCount by _time User CommandLine
           | eventstats avg(cmdCount) as avg stdev(cmdCount) as stdev
           | eval isOutlier=if(cmdCount > avg+1.5*stdev, 1, 0) | search isOutlier=1`
 
-    - **Detection Of Processes Loading A High Number Of DLLs In A Specific Time:**
+- **Detection Of Processes Loading A High Number Of DLLs In A Specific Time:**
         - It is not uncommon for malware to load multiple DLLs in rapid succession
         - Time Window is 1 hour
         - `index="main" EventCode=7 | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image
@@ -379,7 +381,7 @@
           | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image | where unique_dlls_loaded > 3
           | stats count by Image, unique_dlls_loaded | sort - unique_dlls_loaded`
 
-    - **Detection Of Transactions Where The Same Process Has Been Created More Than Once On The Same Computer:**
+- **Detection Of Transactions Where The Same Process Has Been Created More Than Once On The Same Computer:**
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
           | stats count by Image, ParentImage`
         - `transaction` >> used to group related events together based on shared field values
@@ -391,7 +393,7 @@
             | table CommandLine, ParentCommandLine`
 
 ## Practical Challenges:
-    1. Find through an analytics-driven SPL search against all data the source process images that are creating an unusually high number of threads in
+1. Find through an analytics-driven SPL search against all data the source process images that are creating an unusually high number of threads in
        other processes. Enter the outlier process name as your answer where the number of injected threads is greater than two standard deviations
        above the average.
 
@@ -411,9 +413,9 @@
 
 
 # Skill Assessment:
-    0. This skills assessment section builds upon the progress made in the Intrusion Detection With Splunk (Real-world Scenario) section.
+0. This skills assessment section builds upon the progress made in the Intrusion Detection With Splunk (Real-world Scenario) section.
 
-    1. Find through SPL searches against all data the process that created remote threads in rundll32.exe.
+1. Find through SPL searches against all data the process that created remote threads in rundll32.exe.
 
     **Solved:**
     - I need Sysmon 8 (RemoteThread)
@@ -421,7 +423,7 @@
         | stats count by SourceImage, TargetImage | sort - count`
     - Voila, ca peut te donner le drapeau! C'est fini!
 
-    2. Find through SPL searches against all data the process that started the infection.
+2. Find through SPL searches against all data the process that started the infection.
 
     **Solved:**
     - Based on my previous findings, I see that the attack started with communication with another
