@@ -1,6 +1,6 @@
 # My SOC Analyst Journey: HTB Academy + HTB CDSA Preparation
 
-Hi! I’m Oybek, a Cybersecurity Master's Student, finished the **HTB Certified Defensive Security Analyst (CDSA)** certification Path.
+Hi! I’m Oybek, a Cybersecurity Master's Student, finished the **HTB(Hack The Box) Certified Defensive Security Analyst (CDSA)** certification Path.
 I have finished my **7-day long HTB CDSA Exam** with Two real-world Incidents including comprehensive composing a commercial-grade security **Incident Report**.
 Currently, at the time of September 2025, the result is **under review!** 
 
