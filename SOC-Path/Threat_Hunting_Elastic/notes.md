@@ -15,31 +15,31 @@
 
 # Hunting Process:
 1. `Setting the Stage:`
-        - planning / prep / threat landscape / business assets
+    - planning / prep / threat landscape / business assets
 2. `Formulating Hypotheses:`
-        - making educated predictions through:
-            - recent threat intelligence
-            - industry updates
-            - alerts from security tools
-            - or even our professional intuition
+    - making educated predictions through:
+        - recent threat intelligence
+        - industry updates
+        - alerts from security tools
+        - or even our professional intuition
 3. `Designing the Hunt:`
-        - follow the hypothesis
-        - recognize the specific data sources
-        - look for the indicators of compromise (IoCs) or patterns
+    - follow the hypothesis
+    - recognize the specific data sources
+    - look for the indicators of compromise (IoCs) or patterns
 4. `Data Gathering and Examination:`
-        -  active threat hunt occurs
-        -  collecting necessary data >> log files >> network traffic data >> endpoint data
+    -  active threat hunt occurs
+    -  collecting necessary data >> log files >> network traffic data >> endpoint data
 5. `Evaluating Findings and Testing Hypotheses:`
-        - Need to interpret the results.
-        - Identify affected systems
+    - Need to interpret the results.
+    - Identify affected systems
 6. `Mitigating Threats:`
-        - Isolate affected systems
-        - Eliminate malware
-        - Patch vulnerabilities
-        - Modify configurations
+    - Isolate affected systems
+    - Eliminate malware
+    - Patch vulnerabilities
+    - Modify configurations
 7. `After the Hunt:`
-        - Document findings
-        - Share with stakeholders
+    - Document findings
+    - Share with stakeholders
 
 # Glossary Hunting:
 - `Tactics` >> explain "why"
@@ -51,14 +51,14 @@
     - helps to detect `adversaries`
     - the impact is for the `adversaries`
     - Here it is:   *Indicators*               *Impact*
-                    - `TTPs`                   >> Tough
-                    - `Tools`                  >> Challenging
-                    - `Network/Host Artifacts` >> Annoying
-                    - `Domain Names`           >> Simple
-                    - `IP Addresses`           >> Easy
-                    - `Hash Values`            >> Trivial
+        - `TTPs`                   >> Tough
+        - `Tools`                  >> Challenging
+        - `Network/Host Artifacts` >> Annoying
+        - `Domain Names`           >> Simple
+        - `IP Addresses`           >> Easy
+        - `Hash Values`            >> Trivial
 - **Domain Names:**
-        - `domain generation algorithms (DGAs)`: to produce a large number of `pseudo-random domain names` to **evade detection**.
+    - `domain generation algorithms (DGAs)`: to produce a large number of `pseudo-random domain names` to **evade detection**.
 
 - **Diamond Model:**
     -  a more structured approach to `understand`, `analyze` and respond to cyber threats.
@@ -92,22 +92,22 @@
 
 # Practical Challenge: Stuxbot
 - **Report is given:**
-        - Possible Victim Platforms >> Microsoft Windows
-        - Users                     >> Windows Users
-        - Potential Impact          >> Complete takeover victim's machine
-        - Risk Level                >> Critical
+    - Possible Victim Platforms >> Microsoft Windows
+    - Users                     >> Windows Users
+    - Potential Impact          >> Complete takeover victim's machine
+    - Risk Level                >> Critical
 
 - **Attack Scenario:**
-        - Phishing Email >> OneNote File >> Batch File >> Powershell script (in memory) >> RAT
+    - Phishing Email >> OneNote File >> Batch File >> Powershell script (in memory) >> RAT
 
 - **IOCs:**
-        - OneNote File: `https://transfer.sh/get/kNxU7/invoice.one` or
-            `https://mega.io/dl9o1Dz/invoice.one`
-        - Powershell Script: `https://pastebin.com/raw/AvHtdKb2` or `https://pastebin.com/raw/gj58DKz`
-        - C2 Nodes: 91.90.213.14:443 >> 103.248.70.64:443
-        - Cryptographic Hashes of Involved Files (SHA256):
-            - `226A723FFB4A91D9950A8B266167C5B354AB0DB1DC225578494917FE53867EF2`
-            - `018D37CBD3878258C29DB3BC3F2988B6AE688843801B9ABC28E6151141AB66D4`
+    - OneNote File: `https://transfer.sh/get/kNxU7/invoice.one` or
+        `https://mega.io/dl9o1Dz/invoice.one`
+    - Powershell Script: `https://pastebin.com/raw/AvHtdKb2` or `https://pastebin.com/raw/gj58DKz`
+    - C2 Nodes: 91.90.213.14:443 >> 103.248.70.64:443
+    - Cryptographic Hashes of Involved Files (SHA256):
+        - `226A723FFB4A91D9950A8B266167C5B354AB0DB1DC225578494917FE53867EF2`
+        - `018D37CBD3878258C29DB3BC3F2988B6AE688843801B9ABC28E6151141AB66D4`
 
 - **Hunting For Stuxbot With The Elastic Stack:**
     - Available Data:
@@ -138,20 +138,20 @@
         - `(event.code:4624 OR event.code:4625) AND winlog.event_data.LogonType:3 AND source.ip:192.168.28.130`
 
 ## Practical Challenges:
-    1. Navigate to http://[Target IP]:5601 and follow along as we hunt for Stuxbot. In the part where default.exe is under investigation, a VBS file is mentioned. Enter its full name as your answer, including the extension.
+1. Navigate to http://[Target IP]:5601 and follow along as we hunt for Stuxbot. In the part where default.exe is under investigation, a VBS file is mentioned. Enter its full name as your answer, including the extension.
 
     **Solved:**
     - I followed the steps to identify any malicious actions by filtering `process.name:default.exe`
     - I found the .vbs file is downloaded and I found its associated name
 
-    2. Stuxbot uploaded and executed mimikatz. Provide the process arguments (what is after .\mimikatz.exe, ...) as your answer.
+2. Stuxbot uploaded and executed mimikatz. Provide the process arguments (what is after .\mimikatz.exe, ...) as your answer.
 
     **Solved:**
     - In Elastic Stack >> I searched for logs with KQL >> `mimikatz.exe`
     - Then I added as a column `process.args`
     - Then it was easier to find the necessary info
 
-    3. Some PowerShell code has been loaded into memory that scans/targets network shares. Leverage the available PowerShell logs to identify from which popular hacking tool this code derives.
+3. Some PowerShell code has been loaded into memory that scans/targets network shares. Leverage the available PowerShell logs to identify from which popular hacking tool this code derives.
 
     **Solved:**
     - I have applied the filter any scripts with KQL >> `powershell.script_block_text:*`
@@ -165,38 +165,36 @@
 ## The Tasks:
 1. Create a KQL query to hunt for "Lateral Tool Transfer" to C:\Users\Public. Enter the content of the user.name field in the document that is rel           ated to a transferred tool that starts with "r" as your answer.
         .
-        **Solved:**
-        - I identified that for the lateral movement process >> sysmon file create 11 ID may be
-            associated
-        - I searched for the KQL >> `file.directory:C:\Users\Public`
-        - Then I added columns with fields >> `user.name` and `process.name`
-        - Voila >> J'ai fini la tache avec succes
-        -
-        -
+    **Solved:**
+    - I identified that for the lateral movement process >> sysmon file create 11 ID may be
+        associated
+    - I searched for the KQL >> `file.directory:C:\Users\Public`
+    - Then I added columns with fields >> `user.name` and `process.name`
+    - Voila >> J'ai fini la tache avec succes
+    
 2.  Create a KQL query to hunt for "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder". Enter the content of the registry.valu            e field in the document that is related to the first registry-based persistence action as your answer.
-        .
-        **Solved:**
-        - This went challenging for me
-        - I created KQL with `HKU` key and filtered the logs with `sysmon ID 13` to know when
-            `registry key set` events occured
-            - KQL >> `event.code:13` and `HKU*`
-        - I added a column with the field `registry.value`
-        - I also filtered the `file.directory` and `message:*Common Startup*` to find the keys
-            specifically associated with Startup Folder
-        - Voila, c'est fini, j'ai trouve le drapeau
-        -
-        -
+        
+    **Solved:**
+    - This went challenging for me
+    - I created KQL with `HKU` key and filtered the logs with `sysmon ID 13` to know when
+        `registry key set` events occured
+        - KQL >> `event.code:13` and `HKU*`
+    - I added a column with the field `registry.value`
+    - I also filtered the `file.directory` and `message:*Common Startup*` to find the keys
+        specifically associated with Startup Folder
+    - Voila, c'est fini, j'ai trouve le drapeau
+    -
 3.  Create a KQL query to hunt for "PowerShell Remoting for Lateral Movement". Enter the
             content of the winlog.user.name field in the document that is related to PowerShell
             remoting-based lateral movement towards DC1.
-        .
-        **Solved:**
-        - Based on my work wit **MITRE ATT&CK** Framework, I found those clues:
-        - need to put the filter: `process.name:powershell.exe` then I applied
-            `powershell.command_line.block_text:*` >> to see the suspicious powershell remote
-            connections
-        - I found out the remote tool script with .ps1 and correlate this to the right time when the
-            attack time happened
-        - I added a column to Elastic Stack board with `win1log.user.name` field.
-        - Voila, J'ai trouve le drapeau >> La vie est belle!
+        
+    **Solved:**
+    - Based on my work wit **MITRE ATT&CK** Framework, I found those clues:
+    - need to put the filter: 
+        - `process.name:powershell.exe` then I applied `powershell.command_line.block_text:*` >> to see the suspicious powershell remote
+        connections
+    - I found out the remote tool script with .ps1 and correlate this to the right time when the
+        attack time happened
+    - I added a column to Elastic Stack board with `win1log.user.name` field.
+    - Voila, J'ai trouve le drapeau >> La vie est belle!
 
