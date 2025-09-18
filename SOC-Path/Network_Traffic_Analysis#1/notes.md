@@ -226,7 +226,7 @@
     7. Notes & Header Information
 
 ## Practical Challenges
-    1. Utilizing the output shown in question-1.png, who is the server in this communication? (IP Address)
+1. Utilizing the output shown in question-1.png, who is the server in this communication? (IP Address)
 
     **Solved:**
     - I locate the info with TCP connection >>
@@ -234,14 +234,14 @@
     - Public IP addresses vs Private IP address
     - Voila, j'ai obtenu le drapeau
 
-    2. Were absolute or relative sequence numbers used during the capture? (see question-1.zip to answer)
+2. Were absolute or relative sequence numbers used during the capture? (see question-1.zip to answer)
 
     **Solved:**
     - I see the relative numbers since they are modified for better understanding
     - Je sais que absolute numbers sont des chiffres original par TCP
     - Voila, c'est fini!
 
-    3. If I wish to start a capture without hostname resolution, verbose output, showing contents in ASCII and hex, and grab the first 100 packets;
+3. If I wish to start a capture without hostname resolution, verbose output, showing contents in ASCII and hex, and grab the first 100 packets;
        what are the switches used? please answer in the order the switches are asked for in the question.
 
     **Solved:**
@@ -252,7 +252,7 @@
     - All together >> -nvXc 100
     - Voila!
 
-    4. Given the capture file at /tmp/capture.pcap, what tcpdump command will enable you to read from the capture and
+4. Given the capture file at /tmp/capture.pcap, what tcpdump command will enable you to read from the capture and
        show the output contents in Hex and ASCII? (Please use best practices when using switches)
 
     **Solved:**
@@ -263,14 +263,14 @@
 
 # Fundamentals Lab
 - **Practical Challenges:**
-    1. What TCPDump switch will allow us to pipe the contents of a pcap file out to another function such as 'grep'?
+1. What TCPDump switch will allow us to pipe the contents of a pcap file out to another function such as 'grep'?
 
     **Solved:**
     - Il y a un switch appelle `-l` >> avec ca, c'est possible de faire `piping` quand on utilise
         tcpdump en paralel
     - `sudo tcpdump -i eth0 -l | grep -i "dns"`
 
-    2.  If we wished to filter out ICMP traffic from our capture, what filter could we use? ( word only, not symbol please.)
+2.  If we wished to filter out ICMP traffic from our capture, what filter could we use? ( word only, not symbol please.)
 
     **Solved:**
     - `not ICMP`
@@ -380,7 +380,7 @@
     - Hunting For a SYN Flag
         - `sudo tcpdump -i eth0 'tcp[13] &2 != 0'`
 ## Practical Challenges
-    1. What filter will allow me to see traffic coming from or destined to the host with an ip of 10.10.20.1?
+1. What filter will allow me to see traffic coming from or destined to the host with an ip of 10.10.20.1?
 
     **Solved:**
     - I know that we need something bi-directional >> avec `host`
@@ -404,7 +404,7 @@
         - this puts it to the max >> it captures the **entire packet**
 
 ## Practical Challenges
-    1.  What are the client and server port numbers used in first full TCP three-way handshake? (low number first then high number)
+1.  What are the client and server port numbers used in first full TCP three-way handshake? (low number first then high number)
 
     **Solved:**
     - `sudo tcpdump -nr TCPDump-lab-2.pcap -tttt 'tcp[13] & 18 != 0' `
@@ -413,7 +413,7 @@
     - the last ACK (from the client) is what you need
     - Voila, c'est fini
 
-    2. Based on the traffic seen in the pcap file, who is the DNS server in this network segment? (ip address)
+2. Based on the traffic seen in the pcap file, who is the DNS server in this network segment? (ip address)
 
     **Solved:**
     - it went easier since I know that the servers use the known ports while hosts use random ports
