@@ -6,7 +6,7 @@ Currently, at the time of September 2025, the result is **under review!**
 
 This repository is a live record of my hands-on progress using:
 - **175+ practical challenges** completed on the **HTB Academy's Pre-SOC and SOC paths**:[Completed Path Certification](https://shorturl.at/BA0WY)
-- **18 machines** have been pwned (solved) in  Hack The Box: real-world machines** (red team side understanding)
+- **18 machines** have been pwned (solved) in  Hack The Box: real-world machines: (Red-Team side understanding)
 
 🔗 [View Bash Scripting Practice Repository](https://github.com/oybek-turaev-cyber/Bash-Scripting#)
 
