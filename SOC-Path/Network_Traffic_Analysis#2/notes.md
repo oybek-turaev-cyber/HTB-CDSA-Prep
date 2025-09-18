@@ -536,47 +536,47 @@
 
 
 ## How Web Server Works
-- How Usually **Web Servers** are working >> their architecture:
-        - **Client /Browser >> Fronted-Server >> Backend-Server >> Database**
-    2. What's in Fronted Server?
-            - *Apache, Nginx, Load Balancer*
-            - Listens for public HTTP/HTTPS traffic. >> Handles TLS (SSL) encryption.
-            - Caches or compresses static files (CSS, JS, images). >> **Forwards requests to the back-end server.**
-    3. What's in Backend-Server?
-            - *PHP-FPM, Node.js, Flask, Django, Tomcat*
-            - `Runs your actual application code.`
-            - Connects to databases.
-            - Generates the dynamic HTML response.
+1. How Usually **Web Servers** are working >> their architecture:
+    - **Client /Browser >> Fronted-Server >> Backend-Server >> Database**
+2. What's in Fronted Server?
+    - *Apache, Nginx, Load Balancer*
+    - Listens for public HTTP/HTTPS traffic. >> Handles TLS (SSL) encryption.
+    - Caches or compresses static files (CSS, JS, images). >> **Forwards requests to the back-end server.**
+3. What's in Backend-Server?
+    - *PHP-FPM, Node.js, Flask, Django, Tomcat*
+    - `Runs your actual application code.`
+    - Connects to databases.
+    - Generates the dynamic HTML response.
 
 - How **Apache** Works?
-        1. It's Fronted-Server >> it takes the http requests first
-        2. In this point >> it tries to *hide internal part of the server such as backend*
-        3. It does *security filtering*
-           - Block bad IPs
-           - Filter malicious input
-           - Add SSL/TLS (HTTPS)
-           - Do basic firewall duties
-           - Why all this? >> *to safeguard the back-end and less exposed to the internet*
-        4. It does *load balancing*
-           - send traffic  >> Server #1 >> #2 >> #3
-        5. It does *URL Rewriting*
-           - let's say >> the apache got this >> `/categories/books`
-           - it rewrites >> `/categories.php?id=books`
-           - Why? to have **nice clean URL for the user**
+    1. It's Fronted-Server >> it takes the http requests first
+    2. In this point >> it tries to *hide internal part of the server such as backend*
+    3. It does *security filtering*
+        - Block bad IPs
+        - Filter malicious input
+        - Add SSL/TLS (HTTPS)
+        - Do basic firewall duties
+        - Why all this? >> *to safeguard the back-end and less exposed to the internet*
+    4. It does *load balancing*
+        - send traffic  >> Server #1 >> #2 >> #3
+    5. It does *URL Rewriting*
+        - let's say >> the apache got this >> `/categories/books`
+        - it rewrites >> `/categories.php?id=books`
+        - Why? to have **nice clean URL for the user**
 
 - How **Apache May Talk To Back-end?:**
-        1. Usually through `reverse proxy:`
-            - forward proxy >> `client > proxy > internet` (protects client)
-            - reverse proxy >> `server-side proxy` >> the client > server > `server proxies it internally to a hidden backend app.`
-            - so it protects server
-           - `User → Reverse Proxy (Apache) → Backend`
+    1. Usually through `reverse proxy:`
+        - forward proxy >> `client > proxy > internet` (protects client)
+        - reverse proxy >> `server-side proxy` >> the client > server > `server proxies it internally to a hidden backend app.`
+        - so it protects server
+        - `User → Reverse Proxy (Apache) → Backend`
 
 - **Some Difference in Request Handling**
-        1. Apache may send `raw HTTP requests` without filter/ normalizing / sanitizing
-        2. Backend may `execute the malicious requests`
-        **Or**
-        1. The front-end server (Nginx) might read `only the first part`
-        2. But the back-end server (PHP-FPM) might read `the entire thing`
+    1. Apache may send `raw HTTP requests` without filter/ normalizing / sanitizing
+    2. Backend may `execute the malicious requests`
+    **Or**
+    1. The front-end server (Nginx) might read `only the first part`
+    2. But the back-end server (PHP-FPM) might read `the entire thing`
 
 ## Cross-Site Scripting (XSS) & Code Injection Detection
 - **How it works**
