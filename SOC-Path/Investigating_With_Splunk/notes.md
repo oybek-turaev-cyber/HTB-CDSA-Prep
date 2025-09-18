@@ -4,21 +4,20 @@
 
 - **Splunk Architecture:**
     - `Forwarders:` >> responsible for data collection / forward to data indexers
-            - `Universal Forwarders:` >> lightweight agent without any preprocessing
-            - `Heavy Forwarders:` >> agents with parsing data before forwarding
-        -
-        - `Indexers:` >> receive data from `forwarders` >> organize it / store it **in indexes**
-        - `Search Heads:` >>  Search heads coordinate search jobs, dispatching them to the indexers and merging the results
-            - GUI interface for Users in Splunk
-        - `Deployment Server:` >> manages configurations for `forwarders`, distributing apps &
-            updates
-        - `Cluster Master:` >> coordinates activities of `indexers`
+    - `Universal Forwarders:` >> lightweight agent without any preprocessing
+    - `Heavy Forwarders:` >> agents with parsing data before forwarding
+    - `Indexers:` >> receive data from `forwarders` >> organize it / store it **in indexes**
+    - `Search Heads:` >>  Search heads coordinate search jobs, dispatching them to the indexers and merging the results
+        - GUI interface for Users in Splunk
+    - `Deployment Server:` >> manages configurations for `forwarders`, distributing apps &
+        updates
+    - `Cluster Master:` >> coordinates activities of `indexers`
 
-    - **Splunk Key Components:**
-        - `Splunk Web Interface`
-        - `Search Processing Language` **SPL**
-        - `Apps` and `Add-ons`
-        - `Knowledge Objects` >> include fields, tags, event types, lookups, macros, data models, and alerts that enhance the data in Splunk
+- **Splunk Key Components:**
+    - `Splunk Web Interface`
+    - `Search Processing Language` **SPL**
+    - `Apps` and `Add-ons`
+    - `Knowledge Objects` >> include fields, tags, event types, lookups, macros, data models, and alerts that enhance the data in Splunk
 
 ## Splunk as SIEM
 - **Basic Searching:**
@@ -26,41 +25,51 @@
     - `index="main" EventCode!=8`
 
 - **Commands:**
-    - `Comparison:` >> `=, !=, <, >, <=, >=`
-        -
-        - **fields** >> to exclude or include certain fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | fields - User`
-        - **table**  >> to show in tabular format >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | table _time, host, Image`
-        - **rename** >> rename fields in search >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | rename Image as Process`
-        - **dedup**  >> removes duplicate events >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | dedup Image`
-        - **sort**   >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | sort - _time`
-        - **stats**  >> to perform statistical operations >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | stats count by _time, Image`
-        - **chart**  >>  creates a data visualization based on statistical operations
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | chart count by _time, Image`
-        - **eval**   >> creates or redefines fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | eval Process_Path=lower(Image)`
-        - **rex**    >> extracts new fields from existing ones using regular expressions
-            - `index="main" EventCode=4662 | rex max_match=0 "[^%](?<guid>{.*})" | table guid`
-            - whatever finds in the regex is called **guid**
-        - **lookup** >> enriches data with external sources >>
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | rex field=Image "(?P<filename>[^\\\]+)$" | eval filename=lower(filename)
-            - | lookup malware_lookup.csv filename OUTPUTNEW is_malware | table filename, is_malware`
-        -
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | eval filename=mvdedup(split(Image, "\\")) | eval filename=mvindex(filename, -1) | ev          al filename=lower(filename) | lookup malware_lookup.csv filename OUTPUTNEW is_malware | table filename, is_malware | dedup filename, is_malware`
-        - this also removes duplicates from the source file: malware_lookup.csv
-        -
-        - **inputlookup** >> retrieves data from a lookup file without joining it to the search results
-            - `| inputlookup malware_lookup.csv`
-        - **earliest, latest** >> time fields >> `index="main" earliest=-7d EventCode!=1`
-        -
-        - **transaction** >> group events that share common characteristics into transactions
-            - `index="main" sourcetype="WinEventLog:Sysmon" (EventCode=1 OR EventCode=3) | transaction Image startswith=eval(EventCode=1) endswith=eval(Ev               entCode=3) maxspan=1m | table Image |  dedup Image`
-        -  the transaction starts with an event where EventCode is 1 and ends with an event where EventCode is 3
-        -  `maxspan=1m` clause limits the transaction to events occurring within a 1-minute window.
-        -
-        **Subsearches:**
-        -  a search that is nested inside another search
-            -  `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 NOT [ search index="main" sourcetype="WinEventLog:Sysmon" EventCode=1
-               | top limit=100 Image | fields Image ] | table _time, Image, CommandLine, User, ComputerName`
-            - NOT []: The square brackets contain the subsearch.
+    - **Comparison:** >> `=, !=, <, >, <=, >=`
+    - **fields** >> to exclude or include certain fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | fields - User`
+    - **table**  >> to show in tabular format >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | table _time, host, Image`
+    - **rename** >> rename fields in search >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | rename Image as Process`
+    - **dedup**  >> removes duplicate events >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | dedup Image`
+    - **sort**   >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | sort - _time`
+    - **stats**  >> to perform statistical operations >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | stats count by _time, Image`
+    - **chart**  >>  creates a data visualization based on statistical operations
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | chart count by _time, Image`
+    - **eval**   >> creates or redefines fields >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | eval Process_Path=lower(Image)`
+    - **rex**    >> extracts new fields from existing ones using regular expressions
+        - `index="main" EventCode=4662 | rex max_match=0 "[^%](?<guid>{.*})" | table guid`
+        - whatever finds in the regex is called **guid**
+    - **lookup** >> enriches data with external sources >>
+        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | rex field=Image "(?P<filename>[^\\\]+)$" | eval filename=lower(filename)
+        - | lookup malware_lookup.csv filename OUTPUTNEW is_malware | table filename, is_malware`
+    
+    ```code 
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | eval filename=mvdedup(split(Image, "\\")) 
+        | eval filename=mvindex(filename, -1) 
+        | eval filename=lower(filename) 
+        | lookup malware_lookup.csv filename OUTPUTNEW is_malware 
+        | table filename, is_malware 
+        | dedup filename, is_malware
+    ```
+    - this also removes duplicates from the source file: malware_lookup.csv
+    
+    - **inputlookup** >> retrieves data from a lookup file without joining it to the search results
+        - `| inputlookup malware_lookup.csv`
+    - **earliest, latest** >> time fields >> `index="main" earliest=-7d EventCode!=1`
+
+    - **transaction** >> group events that share common characteristics into transactions
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" (EventCode=1 OR EventCode=3) | transaction Image startswith=eval(EventCode=1) endswith=eval(EventCode=3) maxspan=1m | table Image |  dedup Image
+        ```
+    -  the transaction starts with an event where EventCode is 1 and ends with an event where EventCode is 3
+    -  `maxspan=1m` clause limits the transaction to events occurring within a 1-minute window.
+    
+    **Subsearches:**
+    -  a search that is nested inside another search
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 NOT [ search index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | top limit=100 Image | fields Image ] 
+            | table _time, Image, CommandLine, User, ComputerName
+        ```
+    - NOT []: The square brackets contain the subsearch.
 
 ## How to Identify Available Data
 - Commands:
@@ -69,17 +78,17 @@
                  `| metadata type=sources index=* | table source`
     - To see all fields available >> `sourcetype="WinEventLog:Security" | table *`
     - `sourcetype="WinEventLog:Security" | fields Account_Name, EventCode | table Account_Name, EventCode`
-    -
+    
     - **fieldsummary** >> a  list of field names only >> `sourcetype="WinEventLog:Security" | fieldsummary`
-    -
+    
     - **bucket** >> bucket command is used to group the events based on the _time field into 1-day buckets._
     - `index=* sourcetype=* | bucket _time span=1d | stats count by _time, index, sourcetype | sort - _time`_
     - **rare** >> identify uncommon event types >> `index="main" | rare limit=20 useother=f ParentImage`
     - **dc >> distinct count** >> `index=* sourcetype=* | fieldsummary | where count < 100 | table field, count, distinct_count`
     - **sistats** >> `index=* | sistats count by index, sourcetype, source, host`
-    -
+
     - **rare** >> `index=* sourcetype=* | rare limit=10 field1, field2, field3`
-    -
+
 
 ## Helpful:
 - **Pivots:** >> Pivots are an extremely powerful feature in Splunk that allows us to create complex reports and visualizations
@@ -111,9 +120,11 @@
         searched for login_duration for less than 10 minutes = 600 seconds
         Then, using table command, I printed Account_Names sorted by login duration
     - SPL:
-    - `Code=4624 | stats earliest(_time) as first_login latest(_time) as last_login by Account_Name | eval login_duration = last_login - first_login
-    | where login_duration <= 600 | convert ctime(first_login) ctime(last_login) | table Account_Name first_login last_login login_duration
-    | sort - login_duration`
+    ```code
+        Code=4624 | stats earliest(_time) as first_login latest(_time) as last_login by Account_Name | eval login_duration = last_login - first_login
+        | where login_duration <= 600 | convert ctime(first_login) ctime(last_login) | table Account_Name first_login last_login login_duration
+        | sort - login_duration
+    ```
     - Voici, I got the flag!
 
 # Splunk Apps
@@ -169,7 +180,7 @@
         - Then, we look at the Properties Part: two intriguing GUIDs >> Google Search >>
             - **DS-Replication-Get-Changes-All** >> **allows the replication of secret domain data**
             - successfully executed by the Waldo user on the UNIWALDO domain
-            -
+            
     - Time to see any memory dumps >> Sysmon ID 10 (ProcessAccess)
         - `index="main" EventCode=10 lsass | stats count by SourceImage`
         - `index="main" EventCode=10 lsass SourceImage="C:\\Windows\\System32\\notepad.exe"`
@@ -181,25 +192,32 @@
             file on disk, but from arbitrary, or UNKNOWN, regions in memory that don't map to disk
             at all.**
         - But we need to be careful with **JIT processes** >> false positives
-        -
+        
 
 ## Creating Meaningful Alerts
 - It's important now to create a useful alerts
-        - `index="main" CallTrace="*UNKNOWN*" | stats count by EventCode` >> Sysmon ID 10
-        - `index="main" CallTrace="*UNKNOWN*" | stats count by SourceImage`
-        - **false positives we mentioned, and they're all JITs as well! .Net is a JIT, and Squirrel
-            utilities are tied to electron, which is a chromium browser and also contains a JIT**
-    - Now, exclude when source and target are the pareil
-        - `index="main" CallTrace="*UNKNOWN*" | where SourceImage!=TargetImage | stats count by SourceImage`
+    - `index="main" CallTrace="*UNKNOWN*" | stats count by EventCode` >> Sysmon ID 10
+    - `index="main" CallTrace="*UNKNOWN*" | stats count by SourceImage`
+    - **false positives we mentioned, and they're all JITs as well! .Net is a JIT, and Squirrel
+        utilities are tied to electron, which is a chromium browser and also contains a JIT**
+- Now, exclude when source and target are the pareil
+    - `index="main" CallTrace="*UNKNOWN*" | where SourceImage!=TargetImage | stats count by SourceImage`
     - Exclude anything C Sharp related due to its JIT. >> Microsoft.Net folders and anything that has ni.dll in its call trace or clr.dll.
-        - `index="main" CallTrace="*UNKNOWN*" SourceImage!="*Microsoft.NET*" CallTrace!=*ni.dll* CallTrace!=*clr.dll* | where SourceImage!=TargetImage
-          | stats count by SourceImage`
+        ```code
+            index="main" CallTrace="*UNKNOWN*" SourceImage!="*Microsoft.NET*" CallTrace!=*ni.dll* CallTrace!=*clr.dll* 
+            | where SourceImage!=TargetImage
+            | stats count by SourceImage
+        ```
     - Eradicate anything related to WOW64 within its call stack
         - `to the above query: CallTrace!=*wow64*`
     - Exclude >> Explorer.exe as well
         - `SourceImage!="C:\\Windows\\Explorer.EXE"`
     - Final Query >> Alert >>
-    - `index="main" CallTrace="*UNKNOWN*" SourceImage!="*Microsoft.NET*" CallTrace!=*ni.dll* CallTrace!=*clr.dll* CallTrace!=*wow64* SourceImage!="C:\\Win       dows\\Explorer.EXE" | where SourceImage!=TargetImage | stats count by SourceImage, TargetImage, CallTrace`
+    ```code
+        index="main" CallTrace="*UNKNOWN*" SourceImage!="*Microsoft.NET*" CallTrace!=*ni.dll* CallTrace!=*clr.dll* CallTrace!=*wow64* SourceImage!="C:\\Windows\\Explorer.EXE" 
+        | where SourceImage!=TargetImage 
+        | stats count by SourceImage, TargetImage, CallTrace
+    ```
 
 
 ## Practical Challenges:
@@ -263,68 +281,99 @@
 
 ## Crafting SPL Searches Based On Known TTPs
 - **Detection Of Reconnaissance Activities Leveraging Native Windows Binaries:**
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR Image=*\\whoami.exe OR Image=*\\netstat.e           xe OR Image=*\\nbtstat.exe OR Image=*\\hostname.exe OR Image=*\\tasklist.exe | stats count by Image,CommandLine | sort - count`
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR Image=*\\whoami.exe OR Image=*\\netstat.exe OR Image=*\\nbtstat.exe OR Image=*\\hostname.exe OR Image=*\\tasklist.exe 
+        | stats count by Image,CommandLine 
+        | sort - count
+    ```
 
 - **Detection Of Requesting Malicious Payloads/Tools Hosted On Reputable/Whitelisted Domains (Such As githubusercontent.com)**
     - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=22  QueryName="*github*" | stats count by Image, QueryName`
-            - Sysmon ID 22 >> DNS Queries
+        - Sysmon ID 22 >> DNS Queries
 
 - **Detection Of PsExec Usage:**
     - `PsExec` >> is a tool to manage remote Windows systems via command-line
-            - It's available to members of a computer’s Local Administrator group.
-            - It works by `copying a service executable` to the `hidden Admin$ share`.
-            - It taps into the Windows Service Control Manager API to jump-start the service.
-            - The service uses named pipes to link back to the PsExec tool
-            - PsExec can be deployed on both local and remote machines
-            - It can enable a user to act under the **NT AUTHORITY\SYSTEM account**.
-            -
-    - `Case #1:` >> **Leveraging Sysmon Event ID 13 (RegistryEvent):**
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=13 Image="C:\\Windows\\system32\\services.exe"
-              TargetObject="HKLM\\System\\CurrentCo ntrolSet\\Services\\*\\ImagePath" | rex field=Details "(?<reg_file_name>[^\\\]+)$"
-              | eval reg_file_name = lower(reg_file_name), file_name = if(isnull(file_name),reg_file_name,lower(file_name))
-              | stats values(Image) AS Image, values(Details) AS RegistryDetails, values(_time) AS EventTimes, count by file_name, ComputerName`
+        - It's available to members of a computer’s Local Administrator group.
+        - It works by `copying a service executable` to the `hidden Admin$ share`.
+        - It taps into the Windows Service Control Manager API to jump-start the service.
+        - The service uses named pipes to link back to the PsExec tool
+        - PsExec can be deployed on both local and remote machines
+        - It can enable a user to act under the **NT AUTHORITY\SYSTEM account**.
+        
+    - **Case #1:** >> **Leveraging Sysmon Event ID 13 (RegistryEvent):**
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=13 Image="C:\\Windows\\system32\\services.exe"
+            TargetObject="HKLM\\System\\CurrentCo ntrolSet\\Services\\*\\ImagePath" | rex field=Details "(?<reg_file_name>[^\\\]+)$"
+            | eval reg_file_name = lower(reg_file_name), file_name = if(isnull(file_name),reg_file_name,lower(file_name))
+            | stats values(Image) AS Image, values(Details) AS RegistryDetails, values(_time) AS EventTimes, count by file_name, ComputerName
+        ```
         - **this query is looking for instances where the services.exe process has modified the ImagePath value of any service.**
             -
-        - `Case #2:` >> **Leveraging Sysmon Event ID 11 (FileCreate):**
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image=System | stats count by TargetFilename`
-            -
-    - `Case #3:` >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System | stats count by PipeName`
+    - **Case #2:** >> **Leveraging Sysmon Event ID 11 (FileCreate):**
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image=System 
+            | stats count by TargetFilename
+        ```
+
+    - **Case #3:** >> **Leveraging Sysmon Event ID 18 (PipeEvent - PipeConnected):**
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=18 Image=System 
+            | stats count by PipeName
+        ```
 
 - **Detection Of Utilizing Archive Files For Transferring Tools Or Data Exfiltration:**
-    - `index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
-          | stats count by ComputerName, User, TargetFilename | sort - count`
+    ```code
+        index="main" EventCode=11 (TargetFilename="*.zip" OR TargetFilename="*.rar" OR TargetFilename="*.7z")
+        | stats count by ComputerName, User, TargetFilename 
+        | sort - count
+    ```
 
 - **Detection Of Utilizing PowerShell or MS Edge For Downloading Payloads/Tools:**
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" |  stats count by Image, TargetFilename |  sort + count`
-        -
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
-           |  stats count by TargetFilename |  sort + count`
-    - ***Zone.Identifier is indicative of a file downloaded from the internet or another potentially untrustworthy source***
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*powershell.exe*" 
+        | stats count by Image, TargetFilename 
+        | sort + count
+    ```
+        
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=11 Image="*msedge.exe" TargetFilename=*"Zone.Identifier"
+        | stats count by TargetFilename |  sort + count
+    ```
+    - **Zone.Identifier** is indicative of a file downloaded from the internet or another potentially untrustworthy source.
 
 - **Detection Of Execution From Atypical Or Suspicious Locations:**
     - any process creation (EventCode=1) occurring in a `user's Downloads folder`.
-    - `index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" |  stats count by Image`
+    ```code
+        index="main" EventCode=1 | regex Image="C:\\\\Users\\\\.*\\\\Downloads\\\\.*" 
+        |  stats count by Image
+    ```
 
 - **Detection Of Executables or DLLs Being Created Outside The Windows Directory:**
-    - `index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
-          | stats count by User, TargetFilename | sort + count`
+    ```code
+        index="main" EventCode=11 (TargetFilename="*.exe" OR TargetFilename="*.dll") TargetFilename!="*\\windows\\*"
+        | stats count by User, TargetFilename | sort + count
+    ```
 
 - **Detection Of Misspelling Legitimate Binaries:**
     - misspellings of the legitimate PSEXESVC.exe binary, commonly used by PsExec.
         - By examining the Image, ParentImage, CommandLine and ParentCommandLine fields, the search aims to identify instances where variations of psexe a          re used
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (CommandLine="*psexe*.exe"
-          NOT (CommandLine="*PSEXESVC.exe" OR CommandLine="*PsExec64.exe")) OR (ParentCommandLine="*psexe*.exe"
-          NOT (ParentCommandLine="*PSEXESVC.exe" OR ParentCommandLine="*PsExec64.exe")) OR (ParentImage="*psexe*.exe"
-          NOT (ParentImage="*PSEXESVC.exe" OR ParentImage="*PsExec64.exe")) OR (Image="*psexe*.exe"
-          NOT (Image="*PSEXESVC.exe" OR Image="*PsExec64.exe"))
-          |  table Image, CommandLine, ParentImage, ParentCommandLine`
-        -
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (CommandLine="*psexe*.exe"
+            NOT (CommandLine="*PSEXESVC.exe" OR CommandLine="*PsExec64.exe")) OR (ParentCommandLine="*psexe*.exe"
+            NOT (ParentCommandLine="*PSEXESVC.exe" OR ParentCommandLine="*PsExec64.exe")) OR (ParentImage="*psexe*.exe"
+            NOT (ParentImage="*PSEXESVC.exe" OR ParentImage="*PsExec64.exe")) OR (Image="*psexe*.exe"
+            NOT (Image="*PSEXESVC.exe" OR Image="*PsExec64.exe"))
+            | table Image, CommandLine, ParentImage, ParentCommandLine
+        ```
+        
 - **Detection Of Using Non-standard Ports For Communications/Transfers:**
-        - the idea is to exclude the commonly used ports: 80,443,22,21
-        - `index="main" EventCode=3 NOT (DestinationPort=80 OR DestinationPort=443 OR DestinationPort=22 OR DestinationPort=21)
-          | stats count by SourceIp, DestinationIp, DestinationPort | sort - count`
-        -
+    - The idea is to exclude the commonly used ports: 80,443,22,21
+    ```code
+        index="main" EventCode=3 NOT (DestinationPort=80 OR DestinationPort=443 OR DestinationPort=22 OR DestinationPort=21)
+        | stats count by SourceIp, DestinationIp, DestinationPort 
+        | sort - count
+    ```
+
 ## Practical Challenges:
 1.  Find through SPL searches against all data the password utilized during the PsExec activity
 
@@ -339,10 +388,13 @@
 - Key Idea >> **By profiling normal behavior and identifying deviations from this baseline**
 
     - `streamstats` command in Splunk
-
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 | bin _time span=1h | stats count as NetworkConnections by _time, Image
-      | streamstats time_window=24h avg(NetworkConnections) as avg stdev(NetworkConnections) as stdev by Image
-      | eval isOutlier=if(NetworkConnections > (avg + (0.5*stdev)), 1, 0) | search isOutlier=1`
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 
+        | bin _time span=1h | stats count as NetworkConnections by _time, Image
+        | streamstats time_window=24h avg(NetworkConnections) as avg stdev(NetworkConnections) as stdev by Image
+        | eval isOutlier=if(NetworkConnections > (avg + (0.5*stdev)), 1, 0) 
+        | search isOutlier=1
+    ```
 
     - With Network Connections Event 3 >> group these events into hourly intervals
     - `bin` can be seen as a `bucket` alias
@@ -364,32 +416,46 @@
 
 - **Detection Of Abnormal cmd.exe Activity:**
     - calculates the count, average, and standard deviation of cmd.exe executions, and flags outliers.
-        - `index="main" EventCode=1 (CommandLine="*cmd.exe*") | bucket _time span=1h | stats count as cmdCount by _time User CommandLine
-          | eventstats avg(cmdCount) as avg stdev(cmdCount) as stdev
-          | eval isOutlier=if(cmdCount > avg+1.5*stdev, 1, 0) | search isOutlier=1`
+        ```code
+            index="main" EventCode=1 (CommandLine="*cmd.exe*") | bucket _time span=1h | stats count as cmdCount by _time User CommandLine
+            | eventstats avg(cmdCount) as avg stdev(cmdCount) as stdev
+            | eval isOutlier=if(cmdCount > avg+1.5*stdev, 1, 0) 
+            | search isOutlier=1
+        ```
 
 - **Detection Of Processes Loading A High Number Of DLLs In A Specific Time:**
     - It is not uncommon for malware to load multiple DLLs in rapid succession
         - Time Window is 1 hour
-        - `index="main" EventCode=7 | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image
-          | where unique_dlls_loaded > 3 | stats count by Image, unique_dlls_loaded`
-        -
+        ```code
+            index="main" EventCode=7 | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image
+            | where unique_dlls_loaded > 3 
+            | stats count by Image, unique_dlls_loaded
+        ```
+        
         - Some benign activity that can be filtered out to reduce noise:
-        - `index="main" EventCode=7 NOT (Image="C:\\Windows\\System32*")
-          NOT (Image="C:\\Program Files (x86)*") NOT (Image="C:\\Program Files*") NOT (Image="C:\\ProgramData*") NOT (Image="C:\\Users\\waldo\\AppData*")
-          | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image | where unique_dlls_loaded > 3
-          | stats count by Image, unique_dlls_loaded | sort - unique_dlls_loaded`
+        ```code
+            index="main" EventCode=7 NOT (Image="C:\\Windows\\System32*")
+            NOT (Image="C:\\Program Files (x86)*") NOT (Image="C:\\Program Files*") NOT (Image="C:\\ProgramData*") NOT (Image="C:\\Users\\waldo\\AppData*")
+            | bucket _time span=1h | stats dc(ImageLoaded) as unique_dlls_loaded by _time, Image 
+            | where unique_dlls_loaded > 3
+            | stats count by Image, unique_dlls_loaded 
+            | sort - unique_dlls_loaded
+        ```
 
 - **Detection Of Transactions Where The Same Process Has Been Created More Than Once On The Same Computer:**
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
-          | stats count by Image, ParentImage`
-        - `transaction` >> used to group related events together based on shared field values
-        - events are being `grouped together` if they share the **same** `ComputerName` and `Image` values.
-        - program image (Image) and its parent process image (ParentImage).
-        - Some specific Query for further analysis:
-            - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1  | transaction ComputerName, Image  | where mvcount(ProcessGuid) > 1
-            | search Image="C:\\Windows\\System32\\rundll32.exe" ParentImage="C:\\Windows\\System32\\svchost.exe"
-            | table CommandLine, ParentCommandLine`
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 | transaction ComputerName, Image | where mvcount(ProcessGuid) > 1
+        | stats count by Image, ParentImage
+    ```
+    - `transaction` >> used to group related events together based on shared field values
+    - events are being `grouped together` if they share the **same** `ComputerName` and `Image` values.
+    - program image (Image) and its parent process image (ParentImage).
+    - Some specific Query for further analysis:
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=1  | transaction ComputerName, Image  | where mvcount(ProcessGuid) > 1
+        | search Image="C:\\Windows\\System32\\rundll32.exe" ParentImage="C:\\Windows\\System32\\svchost.exe"
+        | table CommandLine, ParentCommandLine
+    ```
 
 ## Practical Challenges:
 1. Find through an analytics-driven SPL search against all data the source process images that are creating an unusually high number of threads in
@@ -402,11 +468,13 @@
     - It went a bit challenging since I practiced different analytics conditions with `avg` and `stdev` functions from `eventstats` command in Splunk.
     - It is interesting that I got the answers when standard deviation is multiplied lower than 2.
     - My SPL >>
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=8
-      | stats count as threadsCount by SourceImage, TargetImage
-      | eventstats avg(threadsCount) as avg stdev(threadsCount) as stdev
-      | eval isOutlier=if(threadsCount > (avg + (1.5*stdev)), 1, 0)
-      | search isOutlier=1`
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=8
+        | stats count as threadsCount by SourceImage, TargetImage
+        | eventstats avg(threadsCount) as avg stdev(threadsCount) as stdev
+        | eval isOutlier=if(threadsCount > (avg + (1.5*stdev)), 1, 0)
+        | search isOutlier=1
+    ```
     - Through this search, vous pouvez chercher le process qui a de nombreuses threads
     - Voila, j'ai trouve le drapeau!!
 
@@ -418,8 +486,12 @@
 
     **Solved:**
     - I need Sysmon 8 (RemoteThread)
-    - My SPL >> `index="main" sourcetype="WinEventLog:Sysmon" EventCode=8 TargetImage="rundll32.exe"
-        | stats count by SourceImage, TargetImage | sort - count`
+    - My SPL >> 
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=8 TargetImage="rundll32.exe"
+        | stats count by SourceImage, TargetImage 
+        | sort - count
+    ```
     - Voila, ca peut te donner le drapeau! C'est fini!
 
 2. Find through SPL searches against all data the process that started the infection.
