@@ -1,7 +1,7 @@
 # AD Structure
-    - `centralized management tool` to manage Windows network environments
-    - a directory service: `Active Directory Domain Services`
-    - since Windows 2000 Server
+- `centralized management tool` to manage Windows network environments
+- a directory service: `Active Directory Domain Services`
+- since Windows 2000 Server
 
 - **Forest**
     - AD Structure which includes one or more domains
