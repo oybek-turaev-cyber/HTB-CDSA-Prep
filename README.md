@@ -6,7 +6,9 @@ Currently, at the time of September 2025, the result is **under review!**
 
 This repository is a live record of my hands-on progress using:
 - **175+ practical challenges** completed on the **HTB Academy's Pre-SOC and SOC paths**:[Completed Path Certification](https://shorturl.at/BA0WY)
-- **18 machines** have been pwned (solved) in  Hack The Box: real-world machines: (Red-Team side understanding)
+- **18 machines** have been pwned (solved) in  **Hack The Box: Tier 0 and Tier 1, Tier 2 (ongoing)** [Pwned Machine Notes](https://github.com/oybek-turaev-cyber/HTB-CDSA-Prep/tree/main/CDSA-Exam-Practical-Labs/lab-notes/starting_point)
+- **5 APT Hunts with Splunk BOTS** completed: [Splunk BOTS Notes](https://github.com/oybek-turaev-cyber/HTB-CDSA-Prep/tree/main/CDSA-Exam-Practical-Labs/lab-notes/bots_splunk)
+    - [Splunk BOTS](https://bots.splunk.com/login?redirect=/)  
 
 🔗 [View Bash Scripting Practice Repository](https://github.com/oybek-turaev-cyber/Bash-Scripting#)
 
