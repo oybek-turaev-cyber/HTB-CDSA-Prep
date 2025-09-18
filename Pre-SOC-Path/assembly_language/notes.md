@@ -52,10 +52,10 @@
 - **Break:**
     - `b _start` >> break on functions, look for symbol
     - `b *_start` >> break on function's memory address
-    - **:*:** >> used to access to *memory address*
+    - *::* >> used to access to *memory address*
     - `b *_start+17` >> after _start +17 bytes
         - GDB will calculate the memory address of _start and then add 18 bytes to that address._
-        -
+        &nbsp;
     - `info b` >> `delete breakpoints` >> disable >> enable
 
 - **Examine:**
@@ -64,14 +64,14 @@
             - *Count:* >> number of times we want to repeat the examine
             - *Format:* >> `x`(hex) >> `s`(string) >> `i`(instruction)
             - *Size:* >> `b`(byte) >> `h`(halfword) >> `w`(word) >> `g`(giant)
-            -
+            
             - `x/4ig $rip`
             - `x/s 0x402000` >> shows the string value at this address
             - `x/iw 0x401000` >> it shows instruction value at this address >> *mov eax, 0x1*
-            -
+            
             - `x/xw 0x401000` >> shows the hex value at this address
             - instead of `mov eax, 0x1` we get `0x000001b8` >> hex vers in Little-Endian format
-            - >> This is read as: b8 01 00 00.
+            - This is read as: b8 01 00 00.
             - `ADDRESS` is an address or register
 - **Step:**
     - stepping through the program
@@ -178,6 +178,7 @@
     4. Use `syscall` assembly instruction to call it
 
 - **Registers: for Syscall Args**
+```
     - `rax` is for syscall number
     - 1st arg >> `rdi`
     - 2nd arg >> `rsi`
@@ -192,6 +193,7 @@
     mov rsi, message
     mov rdx, 20
     syscall
+```
 
 # Procedures
 - used for code refactoring >> straightforward than functions
@@ -207,7 +209,7 @@
 - **Steps:**
     1. Define the procedure
     2. Call it >> finish it and Return
-
+```
     _start:
         call initFib
 
@@ -216,6 +218,7 @@
         xor rbx, rbx
         inc rbx
         ret
+```
 
 # Functions
 - **Functions Calling Convention:**
@@ -266,14 +269,14 @@
     - `ld fib.o -o fib -lc --dynamic-linker /lib64/ld-linux-x86-64.so.2`
 
 # Shellcodes
-    - hex representation of a binary's executable machine code
-    - if passed to processor memory, will be executed
+- hex representation of a binary's executable machine code
+- if passed to processor memory, will be executed
 
-    - reverse shell shellcode >>
-    - `Binary Exploitation`
+- reverse shell shellcode >>
+- `Binary Exploitation`
 
-    - direct execution in memory
-    - each instructions has its own hex value
+- direct execution in memory
+- each instructions has its own hex value
 
 - **Tools:**
     - `pwntools` >> `pwn asm 'push rax' -c 'amd64'` >> to assembly code into shellcode
@@ -304,13 +307,16 @@
 
     - `push` is *dword* >> 4 bytes
     - store the string in register (8bytes) >> then push to Stack
+```
     mov rbx, 'y!'
     push rbx
     mov rbx 'B Academ'
     push rbx
     mov rbx, 'Hello HT'
     push rbx
-    mov rsi, rsp        >> Key moment here, rsi now takes the pointer to the memory address of the
+    mov rsi, rsp       
+```
+Key moment here, `rsi` now takes the pointer to the memory address of the
     last push. Interestingly, we do not use "Null" pointer to stop the string reading that's why
     `rsp` gives us the full string composed of chunks >> also, we define length later
     The point here is that as no here "string null terminator" we can read the whole block of the
@@ -331,6 +337,7 @@
     - **we must use registers that match our data size**
     - not >> `mov rax, 1` >> but >> `mov al, 1`
     - before need to clear out the entire register by zero-out >> `xor rbx, rbx` >> all 64-bits
+```code
     xor rax, rax
     mov al, 1
     xor rdi, rdi
@@ -343,7 +350,7 @@
     add al, 60
     xor dil, dil
     syscall
-
+```
 
  If we ever `need to move 0 to a register`, we can `zero-out that register`, like we did for rdi above.
  Likewise, if we even need to `push 0 to the stack` (e.g. for String Termination) we can `zero-out any register,`
@@ -352,23 +359,24 @@
 # Shellcodes Tools
 - shellcode >> matches >> OS & Processor Arch
 - `execve` >> syscall >> used to execute system application
--
+
 - `execve("/bin//bash", ["bin//bash"], NULL)` >> need to write it in assembly
-- mov al, 59
-- xor rdx, rdx
-- push rdx
-- mov rdi, '/bin//bash'
-- push rdi
-- mov rdi, rsp
-- push rdx
-- push rdi
-- mov rsi, rsp
-- syscall
--
--
+```code
+    - mov al, 59
+    - xor rdx, rdx
+    - push rdx
+    - mov rdi, '/bin//bash'
+    - push rdi
+    - mov rdi, rsp
+    - push rdx
+    - push rdi
+    - mov rsi, rsp
+    - syscall
+```
+
 - **How to avoid:** `push 0` terminator? >> We can zero-out rdx with xor, and then push it for string terminators instead of pushing 0:
--
--
+
+
 - >> extra `/` will be ignored by Linux
 
 - Creating Shellcrafts:
@@ -380,8 +388,8 @@
 - **Msfvenom:**
 - msfvenom, which is another common tool we can use for shellcode generation
 - `msfvenom -l payloads | grep 'linux/x64'`
--
-- **The exec payload allows us to execute a command we specify. Let's pass '/bin/sh/' for the CMD, and test the shellcode we get:**
+
+- *The exec payload allows us to execute a command we specify. Let's pass '/bin/sh/' for the CMD, and test the shellcode we get:*
 
 - `msfvenom -p 'linux/x64/exec' CMD='sh' -a 'x64' --platform 'linux' -f 'hex'`
 
@@ -391,12 +399,12 @@
 -  `msfvenom -l encoders`
 -  `msfvenom -p 'linux/x64/exec' CMD='sh' -a 'x64' --platform 'linux' -f 'hex' -e 'x64/xor'`
 -  with -e flag 'x64/xor' is our encoder
--
+
 -  We can encode our shellcode multiple times with the `-i COUNT` flag
--
+
 -  encoded shellcode is always significantly larger than the non-encoded one
 -  **Because: since encoding a shellcode adds a built-in decoder for runtime decoding**
--
+
 # Practical
 - `msfvenom -p 'linux/x64/exec' CMD='cat /flag.txt' -a 'x64' --platform 'linux' -f 'hex' -e 'x64/xor'` >>
 - with specified command:
@@ -417,17 +425,17 @@
     - Then, I run pwn tools with loader.py
     - run_shellcode(unhex(sys.argv[1])).interactive()
     - This does the job >> I got the flag
-    -
+    
     - In short, I trace the pushed values from the back side >> xored them >> store the decoded
         message >> combine all together for the final shellcode >> run shellcode >> Voila le result
-
+&nbsp;
 - **Task #2**
     - I optimized the flag.s with working lower register: subregisters to assign the smaller values
     - mov al, 8
     - instead of `0` value >> I use `xor` technique >> it reduced by 10 bytes
     - Then, I used msfvenom tool >> with payload `exec` for the `cmd` >> `cat /flg.txt` >> then
     - I sent it with `nc` the shellcode >> I got the flag. Voila
-    -
+    
 
 
 
