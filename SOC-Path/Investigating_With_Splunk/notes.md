@@ -145,10 +145,13 @@
 
     **Solved:**
     - My fixed SPL Query:
-    - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 Image="$imgsel$" Protocol="$protosel$" DestinationPort="$portsel$"
-        DestinationHostname="$destinations$" | eval DestinationHostname=coalesce(DestinationHostname,DestinationIp) | stats count,
-        values(DestinationHostname) AS "Destinations", values(DestinationPort) AS "Ports",
-        values(Protocol) AS "Protocols" by Image | fields Image Destinations Ports Protocols count`
+    ```code
+        index="main" sourcetype="WinEventLog:Sysmon" EventCode=3 Image="$imgsel$" Protocol="$protosel$" DestinationPort="$portsel$" DestinationHostname="$destinations$" 
+        | eval DestinationHostname=coalesce(DestinationHostname,DestinationIp) 
+        | stats count, values(DestinationHostname) AS "Destinations", values(DestinationPort) AS "Ports",
+        values(Protocol) AS "Protocols" by Image 
+        | fields Image Destinations Ports Protocols count
+    ```
     - C'est le query correct et tu peux trouver le drapeau!
     - Voila, c'est fini!
 
@@ -165,7 +168,9 @@
     - Then to be more specific with `cmd.exe` or `powershell.exe`:
         - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (Image="*cmd.exe" OR Image="*powershell.exe") | stats count by ParentImage, Image`
     - It takes an attention: when `notepad.exe` is connected with `powershell.exe`
-        - `index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (Image="*cmd.exe" OR Image="*powershell.exe") ParentImage="C:\\Windows\\System32\\not            epad.exe"`
+        ```code
+            index="main" sourcetype="WinEventLog:Sysmon" EventCode=1 (Image="*cmd.exe" OR Image="*powershell.exe") ParentImage="C:\\Windows\\System32\\notepad.exe"
+        ```
     - Something interesting comes up with downloading files from another machine: `CommandLine`, with `10.0.0.229`
         - `index="main" 10.0.0.229 | stats count by sourcetype`
         - `index="main" 10.0.0.229 sourcetype="linux:syslog"`
