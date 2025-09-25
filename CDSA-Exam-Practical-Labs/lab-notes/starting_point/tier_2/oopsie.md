@@ -5,7 +5,7 @@
 ### Platform: HTB – Starting Point > Tier 2o
 
 ### 1. Scenario Summary
-1. Le site web avec `disclosure vulnerabilité` >> la modification de `cookie`
+1. Le site web avec `disclosure vulnerabilité` >> la modification (manipulation) de `cookie`
 2. `Lateral Movement` avec l'utilisateur et chercher son groupe et trouver le binaire avec **SUID** privilège.
 3. Tout le monde peut exécuter ce binaire avec les privilèges du `propriétaire` (souvent: root)
 4. La vulnerabilité avec le programme: `cat` sans chemin absolu est exploité.
